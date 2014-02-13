@@ -37,8 +37,8 @@
   contact Texas Instruments Incorporated at www.TI.com.
 **************************************************************************************************/
 
-#ifndef KEYFOBDEMO_H
-#define KEYFOBDEMO_H
+#ifndef SPRINTRON__KEYFOB__APP_H
+#define SPRINTRON__KEYFOB__APP_H
 
 #ifdef __cplusplus
 extern "C"
@@ -86,4 +86,4 @@ extern uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events );
 }
 #endif
 
-#endif /* KEYFOBDEMO_H */
+#endif /* SPRINTRON__KEYFOB__APP_H */

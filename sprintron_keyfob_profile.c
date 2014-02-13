@@ -50,7 +50,7 @@
 #include "gattservapp.h"
 #include "gapbondmgr.h"
 
-#include "sprintronKeyfob.h"
+#include "sprintron_keyfob_profile.h"
 
 /*********************************************************************
  * MACROS

@@ -37,8 +37,8 @@
   contact Texas Instruments Incorporated at www.TI.com. 
 **************************************************************************************************/
 
-#ifndef PROXIMITYREPORTER_H
-#define PROXIMITYREPORTER_H
+#ifndef SPRINTRON__KEYFOB__PROFILE_H
+#define SPRINTRON__KEYFOB__PROFILE_H
 
 #ifdef __cplusplus
 extern "C"
@@ -159,4 +159,4 @@ extern bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value );
 }
 #endif
 
-#endif /* PROXIMITYREPORTER_H */
+#endif /* SPRINTRON__KEYFOB__PROFILE_H */

@@ -76,7 +76,7 @@
 #include "devinfoservice.h"
 #include "proxreporter.h"
 #include "battservice.h"
-#include "Sprintronkeyfobdemo.h"
+#include "sprintron_keyfob_app.h"
 
 /*********************************************************************
  * MACROS
