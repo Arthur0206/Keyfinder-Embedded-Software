@@ -773,9 +773,14 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       {
         // then the link was terminated intentionally by the slave or master,
         // or advertising timed out
-         
-		// To Do - (1) do we need to set attr table back to default here?
-		// To Do - (2) do we need to turn off alert or keep it beep?
+
+        // if beep status is on, turn it off, and stop alert.
+        if( keyfobBeepStatus != BEEP_STATUS_NONE )
+        {
+            keyfobBeepStatus = BEEP_STATUS_NONE;
+            SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+            keyfobapp_StopAlert();
+        }
 
         // Turn off LED that shows we're advertising
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
@@ -786,8 +791,13 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       {
         // the link was dropped due to supervision timeout
 
-		// To Do - (1) do we need to set attr table back to default here?
-		// To Do - (2) do we need to turn off alert or keep it beep?
+        // if beep status is on, turn it off, and stop alert.
+        if( keyfobBeepStatus != BEEP_STATUS_NONE )
+        {
+            keyfobBeepStatus = BEEP_STATUS_NONE;
+            SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+            keyfobapp_StopAlert();
+        }
       }
       break;
 
