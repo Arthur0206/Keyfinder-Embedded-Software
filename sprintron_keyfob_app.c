@@ -747,7 +747,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       }
       break;
 
-    //if the state changed to connected, initially assume that keyfob is in range
+    //if the state changed to advertising, initially assume that keyfob is in range
     case GAPROLE_ADVERTISING:
       {
         // Visual feedback that we are advertising.
@@ -829,7 +829,7 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
   	}
     break;
 
-	case SPRINTRON_KEYFOB_BEEP_STATUS:
+  case SPRINTRON_KEYFOB_BEEP_STATUS:
     {
 	  SprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_BEEP_STATUS, &keyfobBeepStatus );
 
