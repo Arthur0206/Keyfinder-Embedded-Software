@@ -126,7 +126,7 @@ static sprintronKeyfobCBs_t *sk_AppCBs = NULL;
  * Profile Attributes - variables
  */
 
-static CONST gattAttrType_t sprintronKeyfobService = { ATT_BT_UUID_SIZE, sprintronKeyfobServiceUUID };
+static CONST gattAttrType_t sprintronKeyfobService = { ATT_BT_UUID_SIZE, skServiceUUID };
 
 static uint8 sprintronKeyfobServerRssiCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
 static int8 sprintronKeyfobServerRssi = SERVER_RSSI_DEFAULT_VALUE;
@@ -547,7 +547,6 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
     uint16 uuid = BUILD_UINT16( pAttr->type.uuid[0], pAttr->type.uuid[1]);
     switch ( uuid )
     {
-      case SPRINTRON_KEYFOB_SERVER_RSSI_UUID:
       case SPRINTRON_KEYFOB_CLIENT_TX_POWER_UUID:
       case SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD_UUID:
         // Validate the value
@@ -568,9 +567,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
           int8 *pCurValue = (int8 *)pAttr->pValue;
           
           *pCurValue = pValue[0];
-          if ( pAttr->pValue == &sprintronKeyfobServerRssi )
-            notify = SPRINTRON_KEYFOB_SERVER_RSSI;        
-          else if ( pAttr->pValue == &sprintronKeyfobClientTxPower )
+          if ( pAttr->pValue == &sprintronKeyfobClientTxPower )
             notify = SPRINTRON_KEYFOB_CLIENT_TX_POWER;   
           else // if ( pAttr->pValue == &sprintronKeyfobOutOfRangeThreshold )
             notify = SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD;     			
@@ -578,7 +575,6 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         
         break;
 
-      case SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS_UUID:
       case SPRINTRON_KEYFOB_BEEP_STATUS_UUID:
         // Validate the value
         // Make sure it's not a blob operation
@@ -588,9 +584,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
             status = ATT_ERR_INVALID_VALUE_SIZE;
           else
           {
-            if ( pAttr->pValue == &sprintronKeyfobOutOfRangeStatus && pValue[0] > OUT_OF_RANGE_STATUS_OUT_OF_RANGE )
-              status = ATT_ERR_INVALID_VALUE;
-            else if ( pAttr->pValue == &sprintronKeyfobBeepStatus && pValue[0] > BEEP_STATUS_HIGH )
+            if ( pValue[0] > BEEP_STATUS_HIGH )
               status = ATT_ERR_INVALID_VALUE;
           }
         }
@@ -605,10 +599,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
           uint8 *pCurValue = (uint8 *)pAttr->pValue;
           
           *pCurValue = pValue[0];
-          if ( pAttr->pValue == &sprintronKeyfobOutOfRangeStatus )
-            notify = SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS;        
-          else // if ( pAttr->pValue == &sprintronKeyfobBeepStatus )
-            notify = SPRINTRON_KEYFOB_BEEP_STATUS;    			
+          notify = SPRINTRON_KEYFOB_BEEP_STATUS;    			
         }
         
         break;
