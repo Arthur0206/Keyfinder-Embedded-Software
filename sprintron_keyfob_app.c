@@ -74,8 +74,8 @@
 #include "gapbondmgr.h"
 
 #include "devinfoservice.h"
-#include "proxreporter.h"
 #include "battservice.h"
+#include "sprintron_keyfob_profile.h"
 #include "sprintron_keyfob_app.h"
 
 /*********************************************************************
@@ -167,7 +167,7 @@ static uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 static gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
-static int8 keyfobServerRssi = SERVICE_RSSI_DEFAULT_VALUE;     // rssi default value
+static int8 keyfobServerRssi = SERVER_RSSI_DEFAULT_VALUE;     // rssi default value
 static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE;  // Tx Power Level (0dBm default)
 static int8 keyfobOutOfRangeThreshold = OUT_OF_RANGE_THRESHOLD_DEFAULT_VALUE;     // 0xFF
 static uint8 keyfobOutOfRangeStatus = OUT_OF_RANGE_STATUS_IN_RANGE;     // default in range
@@ -302,7 +302,7 @@ static void updateRssiAndOutOfRangeStatus( int8 newRSSI )
 {
   keyfobServerRssi = newRSSI;
 
-  SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_SERVER_RSSI,  sizeof ( int8 ), &keyfobServerRssi );
+  sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_SERVER_RSSI,  sizeof ( int8 ), &keyfobServerRssi );
 
   // To do - set this value only when status changes.
   if ( isOutOfRangeStatusToggleNeeded() ) 
@@ -310,7 +310,7 @@ static void updateRssiAndOutOfRangeStatus( int8 newRSSI )
     keyfobOutOfRangeStatus = (keyfobOutOfRangeStatus == OUT_OF_RANGE_STATUS_OUT_OF_RANGE) ? 
                               OUT_OF_RANGE_STATUS_IN_RANGE : OUT_OF_RANGE_STATUS_OUT_OF_RANGE;
 
-    SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS,  sizeof ( int8 ), &keyfobOutOfRangeStatus );
+    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS,  sizeof ( int8 ), &keyfobOutOfRangeStatus );
   }
 }
 
@@ -391,7 +391,7 @@ void KeyFobApp_Init( uint8 task_id )
   GGS_AddService( GATT_ALL_SERVICES );         // GAP
   GATTServApp_AddService( GATT_ALL_SERVICES ); // GATT attributes
   DevInfo_AddService();   // Device Information Service
-  SprintronKeyfob_AddService( GATT_ALL_SERVICES );  // Proximity Reporter Profile
+  sprintronKeyfob_AddService( GATT_ALL_SERVICES );  // Proximity Reporter Profile
   Batt_AddService( );     // Battery Service
 
   // make sure buzzer is off
@@ -475,17 +475,17 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     VOID GAPBondMgr_Register( &keyFob_BondMgrCBs );
 
     // Start the Proximity Profile
-    VOID SprintronKeyfob_RegisterAppCBs( &keyFob_ProfileCBs );
+    VOID sprintronKeyfob_RegisterAppCBs( &keyFob_ProfileCBs );
 
     // Set timer for first battery read event
     osal_start_timerEx( keyfobapp_TaskID, KFD_BATTERY_CHECK_EVT, BATTERY_CHECK_PERIOD );
 
     //Set the proximity attribute values to default
-    SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_SERVER_RSSI,  sizeof ( int8 ), &keyfobServerRssi );
-    SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
-    SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD,  sizeof ( int8 ), &keyfobOutOfRangeThreshold );
-    SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS,  sizeof ( uint8 ), &keyfobOutOfRangeStatus );
-    SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_SERVER_RSSI,  sizeof ( int8 ), &keyfobServerRssi );
+    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
+    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD,  sizeof ( int8 ), &keyfobOutOfRangeThreshold );
+    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS,  sizeof ( uint8 ), &keyfobOutOfRangeStatus );
+    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
 
     // Set LED1 on to give feedback that the power is on, and a timer to turn off
     HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
@@ -594,22 +594,16 @@ static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
  */
 static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 {
-  uint8 SK_Keys = 0;
 
   (void)shift;  // Intentionally unreferenced parameter
 
   if ( keys & HAL_KEY_SW_1 )
   {
-    SK_Keys |= SK_KEY_LEFT;
-
     // Can use this button to do some test. Not needed in production - Sprintron
   }
 
   if ( keys & HAL_KEY_SW_2 )
   {
-
-    SK_Keys |= SK_KEY_RIGHT;
-
     // if device is not in a connection, pressing the right key should toggle
     // advertising on and off
     if( gapProfileState != GAPROLE_CONNECTED )
@@ -722,7 +716,6 @@ void keyfobapp_StopAlert( void )
 static void peripheralStateNotificationCB( gaprole_States_t newState )
 {
   uint16 connHandle = INVALID_CONNHANDLE;
-  uint8 valFalse = FALSE;
 
   if ( gapProfileState != newState )
   {
@@ -778,7 +771,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         if( keyfobBeepStatus != BEEP_STATUS_NONE )
         {
             keyfobBeepStatus = BEEP_STATUS_NONE;
-            SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+            sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
             keyfobapp_StopAlert();
         }
 
@@ -795,7 +788,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         if( keyfobBeepStatus != BEEP_STATUS_NONE )
         {
             keyfobBeepStatus = BEEP_STATUS_NONE;
-            SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+            sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
             keyfobapp_StopAlert();
         }
       }
@@ -829,19 +822,19 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
 
   case SPRINTRON_KEYFOB_CLIENT_TX_POWER:
     {
-      SprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_CLIENT_TX_POWER, &keyfobClientTxPwr );
+      sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_CLIENT_TX_POWER, &keyfobClientTxPwr );
     }
     break;
 
   case SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD:
     {
-      SprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD, &keyfobOutOfRangeThreshold );
+      sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD, &keyfobOutOfRangeThreshold );
   	}
     break;
 
   case SPRINTRON_KEYFOB_BEEP_STATUS:
     {
-	  SprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_BEEP_STATUS, &keyfobBeepStatus );
+	  sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_BEEP_STATUS, &keyfobBeepStatus );
 
       if( keyfobBeepStatus != BEEP_STATUS_NONE )
       {

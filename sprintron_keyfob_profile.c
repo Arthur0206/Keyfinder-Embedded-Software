@@ -247,7 +247,7 @@ static gattAttribute_t sprintronKeyfobAttrTbl[] =
 	    0, 
 	    (uint8 *)&sprintronKeyfobBeepStatus 
 	  },
-}
+};
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -284,7 +284,7 @@ CONST gattServiceCBs_t sprintronKeyfobCBs =
  *
  * @return   Success or Failure
  */
-bStatus_t SprintronKeyfob_AddService( uint32 services )
+bStatus_t sprintronKeyfob_AddService( uint32 services )
 {
   uint8 status = SUCCESS;
 
@@ -356,7 +356,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
         sprintronKeyfobServerRssi = *((int8*)value);
 		
         // See if Notification has been enabled
-        GATTServApp_ProcessCharCfg( sprintronKeyfobServerRssiConfig, (int8 *)&sprintronKeyfobServerRssi, FALSE, 
+        GATTServApp_ProcessCharCfg( sprintronKeyfobServerRssiConfig, (uint8 *)&sprintronKeyfobServerRssi, FALSE, 
                                     sprintronKeyfobAttrTbl, GATT_NUM_ATTRS( sprintronKeyfobAttrTbl ),
                                     INVALID_TASK_ID );
       }
@@ -567,7 +567,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
           int8 *pCurValue = (int8 *)pAttr->pValue;
           
           *pCurValue = pValue[0];
-          if ( pAttr->pValue == &sprintronKeyfobClientTxPower )
+          if ( (int8 *)pAttr->pValue == &sprintronKeyfobClientTxPower )
             notify = SPRINTRON_KEYFOB_CLIENT_TX_POWER;   
           else // if ( pAttr->pValue == &sprintronKeyfobOutOfRangeThreshold )
             notify = SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD;     			
