@@ -777,9 +777,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         // if beep status is on, turn it off, and stop alert.
         if( keyfobBeepStatus != BEEP_STATUS_NONE )
         {
-            keyfobBeepStatus = BEEP_STATUS_NONE;
-            SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
-            keyfobapp_StopAlert();
+          keyfobBeepStatus = BEEP_STATUS_NONE;
+          SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+          keyfobapp_StopAlert();
         }
 
         // Turn off LED that shows we're advertising
@@ -794,9 +794,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         // if beep status is on, turn it off, and stop alert.
         if( keyfobBeepStatus != BEEP_STATUS_NONE )
         {
-            keyfobBeepStatus = BEEP_STATUS_NONE;
-            SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
-            keyfobapp_StopAlert();
+          keyfobBeepStatus = BEEP_STATUS_NONE;
+          SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+          keyfobapp_StopAlert();
         }
       }
       break;
