@@ -273,18 +273,24 @@ static sprintronKeyfobCBs_t keyFob_ProfileCBs =
 
 static bool isOutOfRangeStatusToggleNeeded()
 {
-  bool status;
+  uint8 new_status;
 
-  if (keyfobClientTxPwr - keyfobServerRssi >= keyfobOutOfRangeThreshold)
+  uint8 old_status;
+  sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS, &old_status );
+  
+  if (keyfobClientTxPwr - keyfobServerRssi <= keyfobOutOfRangeThreshold)
   {
-    status = OUT_OF_RANGE_STATUS_IN_RANGE;
+    new_status = OUT_OF_RANGE_STATUS_IN_RANGE;
   }
   else
   {
-    status = OUT_OF_RANGE_STATUS_OUT_OF_RANGE;
+    new_status = OUT_OF_RANGE_STATUS_OUT_OF_RANGE;
   }
 
-  return status;
+  if (new_status != old_status)
+    return true;
+  else 
+    return false;
 }
 
 /*********************************************************************
@@ -301,9 +307,8 @@ static bool isOutOfRangeStatusToggleNeeded()
 static void updateRssiAndOutOfRangeStatus( int8 newRSSI )
 {
   keyfobServerRssi = newRSSI;
-
   sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_SERVER_RSSI,  sizeof ( int8 ), &keyfobServerRssi );
-
+    
   // To do - set this value only when status changes.
   if ( isOutOfRangeStatusToggleNeeded() ) 
   {  

@@ -128,7 +128,7 @@ static sprintronKeyfobCBs_t *sk_AppCBs = NULL;
 
 static CONST gattAttrType_t sprintronKeyfobService = { ATT_BT_UUID_SIZE, skServiceUUID };
 
-static uint8 sprintronKeyfobServerRssiCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
+static uint8 sprintronKeyfobServerRssiCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
 static int8 sprintronKeyfobServerRssi = SERVER_RSSI_DEFAULT_VALUE;
 static gattCharCfg_t sprintronKeyfobServerRssiConfig[GATT_MAX_NUM_CONN];
 
@@ -389,7 +389,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       break;
 	  
 	case SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS:
-      if ( (len == sizeof ( uint8 )) && ((*((uint8*)value) <= OUT_OF_RANGE_STATUS_OUT_OF_RANGE)) ) 
+      if ( len == sizeof ( uint8 ) )
       {
         sprintronKeyfobOutOfRangeStatus = *((uint8*)value);
 		
@@ -405,7 +405,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
 	case SPRINTRON_KEYFOB_BEEP_STATUS:
-      if ( (len == sizeof ( uint8 )) && ((*((uint8*)value) <= BEEP_STATUS_HIGH)) ) 
+      if ( len == sizeof ( uint8 ) )
       {
         sprintronKeyfobBeepStatus = *((uint8*)value);
       }
@@ -606,7 +606,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
 
       case GATT_CLIENT_CHAR_CFG_UUID:
         status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
-                                                 offset, GATT_CLIENT_CFG_NOTIFY );
+                                                 offset, GATT_CLIENT_CFG_NOTIFY | GATT_CLIENT_CFG_INDICATE );
         break;
         
       default:
