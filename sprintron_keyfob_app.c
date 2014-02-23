@@ -577,6 +577,34 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   }
 #endif
 
+#ifdef USE_WHITE_LIST_ADV 
+  if (events & KFD_NON_WHITELIST_STOP_EVT)
+  {
+    uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+    uint8 turnOnAdv;
+
+    // if not in connection, then adv should be on at the time
+    if ( gapProfileState != GAPROLE_CONNECTED ) 
+    {
+      // turn off adv first
+      turnOnAdv = FALSE;
+      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
+  
+      // set adv filter policy to only accept devices in whitelist
+      GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
+  
+      // turn on adv
+      turnOnAdv = TRUE;
+      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
+    }
+    else // if in connection, then adv should be off at the time
+    {
+      // set adv filter policy to only accept devices in whitelist
+      GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
+    }
+  }
+#endif
+
   // Discard unknown events
   return 0;
 }
@@ -624,6 +652,28 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 
   if ( keys & HAL_KEY_SW_2 )
   {
+#ifdef USE_WHITE_LIST_ADV
+    // if device is not in a connection, pression the right key should change adv police to not use whitelist.
+    if ( gapProfileState != GAPROLE_CONNECTED )
+    {
+      uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
+      uint8 turnOnAdv;
+
+      // turn off adv first
+      turnOnAdv = FALSE;
+      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
+
+      // set adv filter policy to accept connection and scan request from all devices
+      GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
+
+      // turn on adv
+      turnOnAdv = TRUE;
+      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
+
+      // set a 30s timer for stopping the non-whitelist adv state.
+      osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, 30000 );
+    }
+#else //USE_WHITE_LIST_ADV
     // if device is not in a connection, pressing the right key should toggle
     // advertising on and off
     if( gapProfileState != GAPROLE_CONNECTED )
@@ -646,6 +696,7 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
       //change the GAP advertisement status to opposite of current status
       GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &new_adv_enabled_status );
     }
+#endif //USE_WHITE_LIST_ADV
 
   }
 

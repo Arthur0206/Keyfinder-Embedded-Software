@@ -60,6 +60,7 @@ extern "C"
 #define KFD_TOGGLE_BUZZER_EVT                             0x0008
 #define KFD_ADV_IN_CONNECTION_EVT                         0x0010
 #define KFD_POWERON_LED_TIMEOUT_EVT                       0x0020
+#define KFD_NON_WHITELIST_STOP_EVT                        0x0040
 
 /*********************************************************************
  * MACROS
