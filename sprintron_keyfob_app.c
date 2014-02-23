@@ -173,6 +173,10 @@ static int8 keyfobOutOfRangeThreshold = OUT_OF_RANGE_THRESHOLD_DEFAULT_VALUE;   
 static uint8 keyfobOutOfRangeStatus = OUT_OF_RANGE_STATUS_IN_RANGE;     // default in range
 static uint8 keyfobBeepStatus = BEEP_STATUS_NONE;     // Link Loss Alert
 
+#ifdef USE_WHITE_LIST_ADV
+uint8 connectedDeviceBDAddr;
+#endif
+
 // GAP - SCAN RSP data (max size = 31 bytes)
 static uint8 deviceName[] =
 {
@@ -342,21 +346,32 @@ void KeyFobApp_Init( uint8 task_id )
   
   // Setup the GAP Peripheral Role Profile
   {
+#ifdef USE_WHITE_LIST_ADV 
+    // Start adv right after device is initialized.
+    uint8 initial_advertising_enable = TRUE;
+#else
     // For the CC2540DK-MINI keyfob, device doesn't start advertising until button is pressed
     uint8 initial_advertising_enable = FALSE;
-    
+#endif
+	
     // When in limited adv mode, use this variable to set adv periodical interval.
     // when set to 0. adv won't restart periodically. To change adv last time, use 
     // GAP_SetParamValue(TGAP_LIM_ADV_TIMEOUT, 180);	
     uint16 gapRole_AdvertOffTime = 0;
-  
+
     uint8 enable_update_request = DEFAULT_ENABLE_UPDATE_REQUEST;
     uint16 desired_min_interval = DEFAULT_DESIRED_MIN_CONN_INTERVAL;
     uint16 desired_max_interval = DEFAULT_DESIRED_MAX_CONN_INTERVAL;
     uint16 desired_slave_latency = DEFAULT_DESIRED_SLAVE_LATENCY;
     uint16 desired_conn_timeout = DEFAULT_DESIRED_CONN_TIMEOUT;
     uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
-   
+	
+#ifdef USE_WHITE_LIST_ADV 
+	uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+	
+	GAPRole_SetParameter(GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy);
+#endif
+
     // Set the GAP Role Parameters
     GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &initial_advertising_enable );
 
@@ -758,10 +773,16 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       {
         GAPRole_GetParameter( GAPROLE_CONNHANDLE, &connHandle );
 
+#ifdef USE_WHITE_LIST_ADV
+        GAPRole_GetParameter( GAPROLE_CONN_BD_ADDR, &connectedDeviceBDAddr );
+
+		VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, &connectedDeviceBDAddr );
+#endif
+
         #if defined ( PLUS_BROADCASTER )
           osal_start_timerEx( keyfobapp_TaskID, KFD_ADV_IN_CONNECTION_EVT, ADV_IN_CONN_WAIT );
         #endif
-          
+
         // Turn off LED that shows we're advertising
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
       }
