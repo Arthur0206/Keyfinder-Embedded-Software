@@ -174,7 +174,7 @@ static uint8 keyfobOutOfRangeStatus = OUT_OF_RANGE_STATUS_IN_RANGE;     // defau
 static uint8 keyfobBeepStatus = BEEP_STATUS_NONE;     // Link Loss Alert
 
 #ifdef USE_WHITE_LIST_ADV
-uint8 connectedDeviceBDAddr;
+uint8 connectedDeviceBDAddr[B_ADDR_LEN];
 #endif
 
 // GAP - SCAN RSP data (max size = 31 bytes)
@@ -826,9 +826,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         GAPRole_GetParameter( GAPROLE_CONNHANDLE, &connHandle );
 
 #ifdef USE_WHITE_LIST_ADV
-        GAPRole_GetParameter( GAPROLE_CONN_BD_ADDR, &connectedDeviceBDAddr );
+        GAPRole_GetParameter( GAPROLE_CONN_BD_ADDR, connectedDeviceBDAddr );
 
-		VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, &connectedDeviceBDAddr );
+		VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
 #endif
 
         #if defined ( PLUS_BROADCASTER )
