@@ -412,6 +412,7 @@ void KeyFobApp_Init( uint8 task_id )
   GATTServApp_AddService( GATT_ALL_SERVICES ); // GATT attributes
   DevInfo_AddService();   // Device Information Service
   sprintronKeyfob_AddService( GATT_ALL_SERVICES );  // Proximity Reporter Profile
+  ProxReporter_AddService(PP_TX_PWR_LEVEL_SERVICE); // Tx Power service
   Batt_AddService( );     // Battery Service
 
   // make sure buzzer is off

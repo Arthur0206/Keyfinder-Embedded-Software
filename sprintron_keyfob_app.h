@@ -53,6 +53,7 @@ extern "C"
  * CONSTANTS
  */
 
+#define USE_WHITE_LIST_ADV                                1
 
 // Key Fob Task Events
 #define KFD_START_DEVICE_EVT                              0x0001
