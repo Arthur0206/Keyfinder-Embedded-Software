@@ -59,10 +59,6 @@
 /*********************************************************************
  * CONSTANTS
  */
-#define PP_DEFAULT_TX_POWER               0
-#define PP_DEFAULT_PATH_LOSS              0x7F
-
-#define SERVAPP_NUM_ATTR_SUPPORTED        5
 
 /*********************************************************************
  * TYPEDEFS
@@ -82,7 +78,7 @@ CONST uint8 sprintronRssiReportServiceUUID[ATT_BT_UUID_SIZE] =
 // Sprintron RSSI Report UUID
 CONST uint8 sprintronRssiReportUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_RSSI_REPORT_UUID ), HI_UINT16( SPRINTRON_RSSI_REPORT_UUID )
+  LO_UINT16( SPRINTRON_RSSI_VALUE_UUID ), HI_UINT16( SPRINTRON_RSSI_VALUE_UUID )
 };
 
 // Sprintron Proximity Alert Service UUID
@@ -562,7 +558,7 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
     {
       // No need for "GATT_SERVICE_UUID" or "GATT_CLIENT_CHAR_CFG_UUID" cases;
       // gattserverapp handles those types for reads 
-      case SPRINTRON_RSSI_REPORT_UUID:
+      case SPRINTRON_RSSI_VALUE_UUID:
       case SPRINTRON_PROXIMITY_CONFIG_UUID:
       case SPRINTRON_PROXIMITY_ALERT_UUID:
       case SPRINTRON_CLIENT_TX_POWER_UUID:
