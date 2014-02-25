@@ -213,6 +213,15 @@ static uint8 advertData[] =
   GAP_ADTYPE_FLAGS,   // AD Type = Flags
   DEFAULT_DISCOVERABLE_MODE | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
 
+  0x07,
+  GAP_ADTYPE_MANUFACTURER_SPECIFIC, //manufacturer specific data
+  0, //put BD addr here
+  0, //put BD addr here
+  0, //put BD addr here
+  0, //put BD addr here
+  0, //put BD addr here
+  0, //put BD addr here
+
   // service UUID, to notify central devices what services are included
   // in this peripheral
   0x0B,   // length of second data structure
@@ -364,7 +373,9 @@ void KeyFobApp_Init( uint8 task_id )
     // For the CC2540DK-MINI keyfob, device doesn't start advertising until button is pressed
     uint8 initial_advertising_enable = FALSE;
 #endif
-	
+
+	uint8 ownAddress[B_ADDR_LEN];
+
     // When in limited adv mode, use this variable to set adv periodical interval.
     // when set to 0. adv won't restart periodically. To change adv last time, use 
     // GAP_SetParamValue(TGAP_LIM_ADV_TIMEOUT, 180);	
@@ -376,7 +387,7 @@ void KeyFobApp_Init( uint8 task_id )
     uint16 desired_slave_latency = DEFAULT_DESIRED_SLAVE_LATENCY;
     uint16 desired_conn_timeout = DEFAULT_DESIRED_CONN_TIMEOUT;
     uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
-	
+
 #ifdef USE_WHITE_LIST_ADV 
 	uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
 	
@@ -393,6 +404,17 @@ void KeyFobApp_Init( uint8 task_id )
     GAPRole_SetParameter( GAPROLE_RSSI_READ_RATE, sizeof( uint16 ), &desired_rssi_read_rate );
 
     GAPRole_SetParameter( GAPROLE_SCAN_RSP_DATA, sizeof ( deviceName ), deviceName );
+
+    // put BD addr into ADV data
+    GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddress);
+
+    advertData[5] = ownAddress[0];
+    advertData[6] = ownAddress[1];
+    advertData[7] = ownAddress[2];
+    advertData[8] = ownAddress[3];
+    advertData[9] = ownAddress[4];
+    advertData[10] = ownAddress[5];
+
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
   
     GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE, sizeof( uint8 ), &enable_update_request );
