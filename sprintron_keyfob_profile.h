@@ -70,7 +70,8 @@ extern "C"
 #define PROXIMITY_CLIENT_TX_POWER_DEFAULT_VALUE         0x0
 
 #define AUDIO_VISUAL_ALERT_OFF                          0x0
-#define AUDIO_VISUAL_ALERT_ON                           0x1
+#define AUDIO_VISUAL_ALERT_LOW                          0x1
+#define AUDIO_VISUAL_ALERT_HIGH                         0x2
 
 // Sprintron Service UUID
 #define SPRINTRON_RSSI_REPORT_SERVICE_UUID              0xFFA1

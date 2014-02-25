@@ -167,11 +167,11 @@ static uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 static gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
-static int8 keyfobServerRssi = SERVER_RSSI_DEFAULT_VALUE;     // rssi default value
+static int8 keyfobRssiReport = RSSI_REPORT_DEFAULT_VALUE;     // rssi default value
 static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE;  // Tx Power Level (0dBm default)
-static int8 keyfobOutOfRangeThreshold = OUT_OF_RANGE_THRESHOLD_DEFAULT_VALUE;     // 0xFF
-static uint8 keyfobOutOfRangeStatus = OUT_OF_RANGE_STATUS_IN_RANGE;     // default in range
-static uint8 keyfobBeepStatus = BEEP_STATUS_NONE;     // Link Loss Alert
+static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;     // 0xFF
+static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;     // default in range
+static uint8 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;     // Link Loss Alert
 
 #ifdef USE_WHITE_LIST_ADV
 uint8 connectedDeviceBDAddr[B_ADDR_LEN];
@@ -234,8 +234,8 @@ static void keyfobapp_StopAlert( void );
 static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
-static void updateRssiAndOutOfRangeStatus( int8 newRSSI );
-static uint8 isOutOfRangeStatusToggleNeeded();
+static void updateProximityAlert( int8 newRSSI );
+static uint8 isProximityAlertToggleNeeded();
 
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -245,7 +245,7 @@ static uint8 isOutOfRangeStatusToggleNeeded();
 static gapRolesCBs_t keyFob_PeripheralCBs =
 {
   peripheralStateNotificationCB,  // Profile State Change Callbacks
-  updateRssiAndOutOfRangeStatus   // When a valid RSSI is read from controller
+  updateProximityAlert   // When a valid RSSI is read from controller
 };
 
 // GAP Bond Manager Callbacks
@@ -266,7 +266,7 @@ static sprintronKeyfobCBs_t keyFob_ProfileCBs =
  */
 
 /*********************************************************************
- * @fn      isOutOfRangeStatusToggleNeeded
+ * @fn      isProximityAlertToggleNeeded
  *
  * @brief   Added by Sprintron
  *
@@ -275,20 +275,20 @@ static sprintronKeyfobCBs_t keyFob_ProfileCBs =
  * @return  Out_Of_Range_Status
  */
 
-static bool isOutOfRangeStatusToggleNeeded()
+static bool isProximityAlertToggleNeeded()
 {
   uint8 new_status;
 
   uint8 old_status;
-  sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS, &old_status );
+  sprintronKeyfob_GetParameter( SPRINTRON_PROXIMITY_ALERT, &old_status );
   
-  if (keyfobClientTxPwr - keyfobServerRssi <= keyfobOutOfRangeThreshold)
+  if (keyfobClientTxPwr - keyfobRssiReport <= keyfobProximityConfig)
   {
-    new_status = OUT_OF_RANGE_STATUS_IN_RANGE;
+    new_status = PROXIMITY_ALERT_IN_RANGE;
   }
   else
   {
-    new_status = OUT_OF_RANGE_STATUS_OUT_OF_RANGE;
+    new_status = PROXIMITY_ALERT_OUT_OF_RANGE;
   }
 
   if (new_status != old_status)
@@ -298,7 +298,7 @@ static bool isOutOfRangeStatusToggleNeeded()
 }
 
 /*********************************************************************
- * @fn      updateRssiAndOutOfRangeStatus
+ * @fn      updateProximityAlertStatus
  *
  * @brief   Added by Sprintron
  *              This function will be called when RSSI value is available every 1s. 
@@ -308,18 +308,18 @@ static bool isOutOfRangeStatusToggleNeeded()
  * @return  none
  */
 
-static void updateRssiAndOutOfRangeStatus( int8 newRSSI )
+static void updateProximityAlert( int8 newRSSI )
 {
-  keyfobServerRssi = newRSSI;
-  sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_SERVER_RSSI,  sizeof ( int8 ), &keyfobServerRssi );
+  keyfobRssiReport = newRSSI;
+  sprintronKeyfob_SetParameter( SPRINTRON_RSSI_REPORT,  sizeof ( int8 ), &keyfobRssiReport );
     
   // To do - set this value only when status changes.
-  if ( isOutOfRangeStatusToggleNeeded() ) 
+  if ( isProximityAlertToggleNeeded() ) 
   {  
-    keyfobOutOfRangeStatus = (keyfobOutOfRangeStatus == OUT_OF_RANGE_STATUS_OUT_OF_RANGE) ? 
-                              OUT_OF_RANGE_STATUS_IN_RANGE : OUT_OF_RANGE_STATUS_OUT_OF_RANGE;
+    keyfobProximityAlert = (keyfobProximityAlert == PROXIMITY_ALERT_OUT_OF_RANGE) ? 
+                              PROXIMITY_ALERT_IN_RANGE : PROXIMITY_ALERT_OUT_OF_RANGE;
 
-    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS,  sizeof ( int8 ), &keyfobOutOfRangeStatus );
+    sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( int8 ), &keyfobProximityAlert );
   }
 }
 
@@ -411,7 +411,7 @@ void KeyFobApp_Init( uint8 task_id )
   GGS_AddService( GATT_ALL_SERVICES );         // GAP
   GATTServApp_AddService( GATT_ALL_SERVICES ); // GATT attributes
   DevInfo_AddService();   // Device Information Service
-  sprintronKeyfob_AddService( GATT_ALL_SERVICES );  // Proximity Reporter Profile
+  sprintronKeyfob_AddService( GATT_ALL_SERVICES );  // Sprintron Keyfob Profile
   ProxReporter_AddService(PP_TX_PWR_LEVEL_SERVICE); // Tx Power service
   Batt_AddService( );     // Battery Service
 
@@ -502,11 +502,11 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     osal_start_timerEx( keyfobapp_TaskID, KFD_BATTERY_CHECK_EVT, BATTERY_CHECK_PERIOD );
 
     //Set the proximity attribute values to default
-    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_SERVER_RSSI,  sizeof ( int8 ), &keyfobServerRssi );
-    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
-    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD,  sizeof ( int8 ), &keyfobOutOfRangeThreshold );
-    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS,  sizeof ( uint8 ), &keyfobOutOfRangeStatus );
-    sprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+    sprintronKeyfob_SetParameter( SPRINTRON_RSSI_REPORT,  sizeof ( int8 ), &keyfobRssiReport );
+    sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_CONFIG,  sizeof ( int8 ), &keyfobProximityConfig );
+    sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
+    sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
+    sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
 
     // Set LED1 on to give feedback that the power is on, and a timer to turn off
     HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
@@ -554,12 +554,12 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       // check to see if buzzer has beeped maximum number of times
       // if it has, then don't turn it back on
       if ( ( buzzer_beep_count < BUZZER_MAX_BEEPS ) &&
-           ( keyfobBeepStatus != BEEP_STATUS_NONE ) )
+           ( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF ) )
       {
         osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 800 );
       }
     }
-    else if ( keyfobBeepStatus != BEEP_STATUS_NONE )
+    else if ( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF )
     {
       // if this event was triggered while the buzzer is off then turn it on if appropriate
       keyfobapp_PerformAlert();
@@ -714,9 +714,9 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
  */
 static void keyfobapp_PerformAlert( void )
 {
-    switch( keyfobBeepStatus )
+    switch( keyfobAudioVisualAlert )
     {
-    case BEEP_STATUS_LOW:
+    case AUDIO_VISUAL_ALERT_LOW:
 
   #if defined ( POWER_SAVING )
         osal_pwrmgr_device( PWRMGR_ALWAYS_ON );
@@ -730,7 +730,7 @@ static void keyfobapp_PerformAlert( void )
       HalLedSet( (HAL_LED_1 | HAL_LED_2), HAL_LED_MODE_OFF );
       break;
 
-    case BEEP_STATUS_HIGH:
+    case AUDIO_VISUAL_ALERT_HIGH:
 
   #if defined ( POWER_SAVING )
         osal_pwrmgr_device( PWRMGR_ALWAYS_ON );
@@ -745,7 +745,7 @@ static void keyfobapp_PerformAlert( void )
       HalLedSet( HAL_LED_2, HAL_LED_MODE_FLASH );
       break;
 
-    case BEEP_STATUS_NONE:
+    case AUDIO_VISUAL_ALERT_OFF:
         // Fall through
     default:
       keyfobapp_StopAlert();
@@ -846,10 +846,10 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         // or advertising timed out
 
         // if beep status is on, turn it off, and stop alert.
-        if( keyfobBeepStatus != BEEP_STATUS_NONE )
+        if( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF)
         {
-          keyfobBeepStatus = BEEP_STATUS_NONE;
-          SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+          keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
           keyfobapp_StopAlert();
         }
 
@@ -863,10 +863,10 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         // the link was dropped due to supervision timeout
 
         // if beep status is on, turn it off, and stop alert.
-        if( keyfobBeepStatus != BEEP_STATUS_NONE )
+        if( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF )
         {
-          keyfobBeepStatus = BEEP_STATUS_NONE;
-          SprintronKeyfob_SetParameter( SPRINTRON_KEYFOB_BEEP_STATUS,  sizeof ( uint8 ), &keyfobBeepStatus );
+          keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
           keyfobapp_StopAlert();
         }
       }
@@ -898,23 +898,23 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
   switch( attrParamID )
   {
 
-  case SPRINTRON_KEYFOB_CLIENT_TX_POWER:
+  case SPRINTRON_CLIENT_TX_POWER:
     {
-      sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_CLIENT_TX_POWER, &keyfobClientTxPwr );
+      sprintronKeyfob_GetParameter( SPRINTRON_CLIENT_TX_POWER, &keyfobClientTxPwr );
     }
     break;
 
-  case SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD:
+  case SPRINTRON_PROXIMITY_CONFIG:
     {
-      sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD, &keyfobOutOfRangeThreshold );
+      sprintronKeyfob_GetParameter( SPRINTRON_PROXIMITY_CONFIG, &keyfobProximityConfig );
   	}
     break;
 
-  case SPRINTRON_KEYFOB_BEEP_STATUS:
+  case SPRINTRON_AUDIO_VISUAL_ALERT:
     {
-	  sprintronKeyfob_GetParameter( SPRINTRON_KEYFOB_BEEP_STATUS, &keyfobBeepStatus );
+	  sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
 
-      if( keyfobBeepStatus != BEEP_STATUS_NONE )
+      if( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF)
       {
         keyfobapp_PerformAlert();
         buzzer_beep_count = 0;
