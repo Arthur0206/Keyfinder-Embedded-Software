@@ -167,11 +167,14 @@ static uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 static gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
-static int8 keyfobRssiValue = RSSI_VALUE_DEFAULT_VALUE;     // rssi default value
-static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE;  // Tx Power Level (0dBm default)
-static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;     // 0xFF
-static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;     // default in range
-static uint8 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;     // Link Loss Alert
+static int8 keyfobRssiValue = RSSI_VALUE_DEFAULT_VALUE;   
+static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE; 
+static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;    
+static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;  
+static uint8 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF; 
+static uint16 keyfobConnectionParameters[3] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
+                                                SUPERVISION_TIMEOUT_DEFAULT_VALUE,
+                                                 SLAVE_LATENCY_DEFAULT_VALUE };
 
 #ifdef USE_WHITE_LIST_ADV
 uint8 connectedDeviceBDAddr[B_ADDR_LEN];
@@ -212,10 +215,18 @@ static uint8 advertData[] =
 
   // service UUID, to notify central devices what services are included
   // in this peripheral
-  0x03,   // length of second data structure (7 bytes excluding length byte)
+  0x0B,   // length of second data structure
   GAP_ADTYPE_16BIT_MORE,   // list of 16-bit UUID's available, but not complete list
-  LO_UINT16( SPRINTRON_KEYFOB_SERVICE_UUID ),	   // Sprintron's keyfob service - private profile & service
-  HI_UINT16( SPRINTRON_KEYFOB_SERVICE_UUID )
+  LO_UINT16( SPRINTRON_RSSI_REPORT_SERVICE_UUID ),
+  HI_UINT16( SPRINTRON_RSSI_REPORT_SERVICE_UUID ),
+  LO_UINT16( SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID ),
+  HI_UINT16( SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID ),
+  LO_UINT16( SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID ),
+  HI_UINT16( SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID ),
+  LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID ),
+  HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID ),
+  LO_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID ),
+  HI_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID )
 };
 
 // GAP GATT Attributes
@@ -507,6 +518,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
     sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
     sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
+    sprintronKeyfob_SetParameter( SPRINTRON_CONNECTION_PARAMETERS,  sizeof ( keyfobConnectionParameters ), keyfobConnectionParameters );
 
     // Set LED1 on to give feedback that the power is on, and a timer to turn off
     HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
@@ -926,6 +938,16 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
     }
     break;
 
+  case SPRINTRON_CONNECTION_PARAMETERS:
+    {
+      sprintronKeyfob_GetParameter( SPRINTRON_CONNECTION_PARAMETERS, keyfobConnectionParameters );
+
+      GAPRole_SendUpdateParam( keyfobConnectionParameters[0], keyfobConnectionParameters[0],
+                               keyfobConnectionParameters[2], keyfobConnectionParameters[1],
+                               GAPROLE_NO_ACTION );
+    }
+    break;
+    
   default:
     // should not reach here!
     break;

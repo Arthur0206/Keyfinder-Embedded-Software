@@ -74,9 +74,11 @@ extern "C"
 #define AUDIO_VISUAL_ALERT_LOW                          0x1
 #define AUDIO_VISUAL_ALERT_HIGH                         0x2
 
-#define CONNECTION_INTERVAL_DEFAULT_VALUE               0x1F4
-#define SUPERVISION_TIMEOUT_DEFAULT_VALUE               0x1388
-#define SLAVE_LATENCY_DEFAULT_VALUE                     0x0
+// unit is 1.25ms => 400 = 500ms
+#define CONNECTION_INTERVAL_DEFAULT_VALUE               400
+// unit is 10ms => 500 = 5s
+#define SUPERVISION_TIMEOUT_DEFAULT_VALUE               500
+#define SLAVE_LATENCY_DEFAULT_VALUE                     0
 
 // Sprintron Service UUID
 #define SPRINTRON_RSSI_REPORT_SERVICE_UUID              0xFFA1
