@@ -73,40 +73,58 @@
  */
 
 
-// Sprintron Keyfob Service UUID
-CONST uint8 skServiceUUID[ATT_BT_UUID_SIZE] =
+// Sprintron RSSI Report Service UUID
+CONST uint8 sprintronRssiReportServiceUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_KEYFOB_SERVICE_UUID ), HI_UINT16( SPRINTRON_KEYFOB_SERVICE_UUID )
+  LO_UINT16( SPRINTRON_RSSI_REPORT_SERVICE_UUID ), HI_UINT16( SPRINTRON_RSSI_REPORT_SERVICE_UUID )
 };
 
-// Sprintron Keyfob Server RSSI UUID
-CONST uint8 skServerRssiUUID[ATT_BT_UUID_SIZE] =
+// Sprintron RSSI Report UUID
+CONST uint8 sprintronRssiReportUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_KEYFOB_SERVER_RSSI_UUID ), HI_UINT16( SPRINTRON_KEYFOB_SERVER_RSSI_UUID )
+  LO_UINT16( SPRINTRON_RSSI_REPORT_UUID ), HI_UINT16( SPRINTRON_RSSI_REPORT_UUID )
 };
 
-// Sprintron Keyfob Client Tx Power UUID
-CONST uint8 skClientTxPowerUUID[ATT_BT_UUID_SIZE] =
+// Sprintron Proximity Alert Service UUID
+CONST uint8 sprintronProximityAlertServiceUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_KEYFOB_CLIENT_TX_POWER_UUID ), HI_UINT16( SPRINTRON_KEYFOB_CLIENT_TX_POWER_UUID )
+  LO_UINT16( SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID ), HI_UINT16( SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID )
 };
 
-// Sprintron Keyfob Out Of Range Threshold UUID
-CONST uint8 skOutOfRangeThresholdUUID[ATT_BT_UUID_SIZE] =
+// Sprintron Proximity Config UUID
+CONST uint8 sprintronProximityConfigUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD_UUID ), HI_UINT16( SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD_UUID )
+  LO_UINT16( SPRINTRON_PROXIMITY_CONFIG_UUID ), HI_UINT16( SPRINTRON_PROXIMITY_CONFIG_UUID )
 };
 
-// Sprintron Keyfob Out Of Range Status UUID
-CONST uint8 skOutOfRangeStatusUUID[ATT_BT_UUID_SIZE] =
+// Sprintron Proximity Alert UUID
+CONST uint8 sprintronProximityAlertUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS_UUID ), HI_UINT16( SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS_UUID )
+  LO_UINT16( SPRINTRON_PROXIMITY_ALERT_UUID ), HI_UINT16( SPRINTRON_PROXIMITY_ALERT_UUID )
 };
 
-// Sprintron Keyfob Beep Status UUID
-CONST uint8 skBeepStatusUUID[ATT_BT_UUID_SIZE] =
+// Sprintron Client Tx Power Service UUID
+CONST uint8 sprintronClientTxPowerServiceUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_KEYFOB_BEEP_STATUS_UUID ), HI_UINT16( SPRINTRON_KEYFOB_BEEP_STATUS_UUID )
+  LO_UINT16( SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID ), HI_UINT16( SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID )
+};
+
+// Sprintron Proximity Alert UUID
+CONST uint8 sprintronClientTxPowerUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_CLIENT_TX_POWER_UUID ), HI_UINT16( SPRINTRON_CLIENT_TX_POWER_UUID )
+};
+
+// Sprintron Client Tx Power Service UUID
+CONST uint8 sprintronAudioVisualAlertServiceUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID ), HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID )
+};
+
+// Sprintron Proximity Alert UUID
+CONST uint8 sprintronAudioVisualAlertUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID ), HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID )
 };
 
 /*********************************************************************
@@ -126,128 +144,158 @@ static sprintronKeyfobCBs_t *sk_AppCBs = NULL;
  * Profile Attributes - variables
  */
 
-static CONST gattAttrType_t sprintronKeyfobService = { ATT_BT_UUID_SIZE, skServiceUUID };
+static CONST gattAttrType_t sprintronRssiReportService = { ATT_BT_UUID_SIZE, sprintronRssiReportServiceUUID };
+static CONST gattAttrType_t sprintronProximityAlertService = { ATT_BT_UUID_SIZE, sprintronProximityAlertServiceUUID };
+static CONST gattAttrType_t sprintronClientTxPowerService = { ATT_BT_UUID_SIZE, sprintronClientTxPowerServiceUUID };
+static CONST gattAttrType_t sprintronAudioVisualAlertService = { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertServiceUUID };
 
-static uint8 sprintronKeyfobServerRssiCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
-static int8 sprintronKeyfobServerRssi = SERVER_RSSI_DEFAULT_VALUE;
-static gattCharCfg_t sprintronKeyfobServerRssiConfig[GATT_MAX_NUM_CONN];
+static uint8 sprintronRssiReportCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
+static int8 sprintronRssiReport = RSSI_REPORT_DEFAULT_VALUE;
+static gattCharCfg_t sprintronRssiReportConfig[GATT_MAX_NUM_CONN];
 
-static uint8 sprintronKeyfobClientTxPowerCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
-static int8 sprintronKeyfobClientTxPower = CLIENT_TX_POWER_DEFAULT_VALUE;
+static uint8 sprintronProximityConfigCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
+static int8 sprintronProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;
+static uint8 sprintronProximityAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
+static uint8 sprintronProximityAlert = PROXIMITY_ALERT_IN_RANGE;
+static gattCharCfg_t sprintronProximityAlertConfig[GATT_MAX_NUM_CONN];
 
-static uint8 sprintronKeyfobOutOfRangeThresholdCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
-static int8 sprintronKeyfobOutOfRangeThreshold = OUT_OF_RANGE_THRESHOLD_DEFAULT_VALUE;
+static uint8 sprintronClientTxPowerCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
+static int8 sprintronClientTxPower = PROXIMITY_CLIENT_TX_POWER_DEFAULT_VALUE;
 
-static uint8 sprintronKeyfobOutOfRangeStatusCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
-static uint8 sprintronKeyfobOutOfRangeStatus = OUT_OF_RANGE_STATUS_IN_RANGE;
-static gattCharCfg_t sprintronKeyfobOutOfRangeConfig[GATT_MAX_NUM_CONN];
-
-static uint8 sprintronKeyfobBeepStatusCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
-static uint8 sprintronKeyfobBeepStatus = BEEP_STATUS_NONE;
+static uint8 sprintronAudioVisualAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
+static uint8 sprintronAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
 
 /*********************************************************************
  * Profile Attributes - Table
  */
-// Link Loss Service Atttribute Table
-static gattAttribute_t sprintronKeyfobAttrTbl[] = 
+
+static gattAttribute_t sprintronRssiReportAttrTbl[] =
 {
-  // Sprintron Keyfob service 
+  // Sprintron Rssi Report Service
   {
     { ATT_BT_UUID_SIZE, primaryServiceUUID },
-	GATT_PERMIT_READ,
-	0,
-	(uint8 *)&sprintronKeyfobService
+    GATT_PERMIT_READ,
+    0,
+    (uint8 *)&sprintronRssiReportService
   },
-/////////// Server RSSI ////////////
     // Characteristic Declaration
     {
       {ATT_BT_UUID_SIZE, characterUUID},
 	  GATT_PERMIT_READ,
 	  0,
-	  (uint8 *)&sprintronKeyfobServerRssiCharProps
+	  (uint8 *)&sprintronRssiReportCharProps
     },
-	  // Server RSSI
-	  { 
-	    { ATT_BT_UUID_SIZE, skServerRssiUUID },
-	    GATT_PERMIT_READ, 
-	    0, 
-	    (uint8 *)&sprintronKeyfobServerRssi 
-	  },
-      // Characteristic configuration
+      // Rssi Report
       { 
-	    { ATT_BT_UUID_SIZE, clientCharCfgUUID },
-	    GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
-	    0, 
-	    (uint8 *)sprintronKeyfobServerRssiConfig 
-	  },
-/////////// Client tx power ////////////
+        { ATT_BT_UUID_SIZE, sprintronRssiReportUUID},
+        GATT_PERMIT_READ, 
+        0, 
+        (uint8 *)&sprintronRssiReport
+      },
+        // Characteristic configuration
+        { 
+          { ATT_BT_UUID_SIZE, clientCharCfgUUID },
+          GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+          0, 
+          (uint8 *)sprintronRssiReportConfig 
+        },
+}
+
+static gattAttribute_t sprintronProximityAlertAttrTbl[] = 
+{
+  // Sprintron Proximity Alert Service
+  {
+    { ATT_BT_UUID_SIZE, primaryServiceUUID },
+    GATT_PERMIT_READ,
+    0,
+    (uint8 *)&sprintronProximityAlertService
+  },
     // Characteristic Declaration
     {
       {ATT_BT_UUID_SIZE, characterUUID},
       GATT_PERMIT_READ,
       0,
-      (uint8 *)&sprintronKeyfobClientTxPowerCharProps
+      (uint8 *)&sprintronProximityConfigCharProps
     },
-	  // Client tx power
-	  { 
-	    { ATT_BT_UUID_SIZE, skClientTxPowerUUID },
-	    GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
-	    0, 
-	    (uint8 *)&sprintronKeyfobClientTxPower 
-	  },
-/////////// Out of range threshold ////////////
+      // Proximity Config
+      { 
+        { ATT_BT_UUID_SIZE, sprintronProximityConfigUUID},
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+        0, 
+        (uint8 *)&sprintronProximityConfig
+      },
     // Characteristic Declaration
     {
       {ATT_BT_UUID_SIZE, characterUUID},
       GATT_PERMIT_READ,
       0,
-      (uint8 *)&sprintronKeyfobOutOfRangeThresholdCharProps
+      (uint8 *)&sprintronProximityAlertCharProps
     },
-	  // Out of range threshold
-	  { 
-	    { ATT_BT_UUID_SIZE, skOutOfRangeThresholdUUID },
-	    GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
-	    0, 
-	    (uint8 *)&sprintronKeyfobOutOfRangeThreshold 
-	  },
-/////////// Out of range status ////////////
+      // Proximity Alert
+      { 
+        { ATT_BT_UUID_SIZE, sprintronProximityAlertUUID},
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+        0, 
+        (uint8 *)&sprintronProximityAlert
+      },
+        // Characteristic configuration
+        { 
+          { ATT_BT_UUID_SIZE, clientCharCfgUUID },
+          GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+          0, 
+          (uint8 *)sprintronProximityAlertConfig 
+        },
+}
+
+static gattAttribute_t sprintronClientTxPowerAttrTbl[] = 
+{
+  // Sprintron Client Tx Power Service
+  {
+    { ATT_BT_UUID_SIZE, primaryServiceUUID },
+    GATT_PERMIT_READ,
+    0,
+    (uint8 *)&sprintronClientTxPowerService
+  },
     // Characteristic Declaration
     {
       {ATT_BT_UUID_SIZE, characterUUID},
       GATT_PERMIT_READ,
       0,
-      (uint8 *)&sprintronKeyfobOutOfRangeStatusCharProps
+      (uint8 *)&sprintronClientTxPowerCharProps
     },
-	  // Out of range status
-	  { 
-	    { ATT_BT_UUID_SIZE, skOutOfRangeStatusUUID },
-	    GATT_PERMIT_READ, 
-	    0, 
-	    (uint8 *)&sprintronKeyfobOutOfRangeStatus 
-	  },
-	  // Characteristic configuration
-	  { 
-	    { ATT_BT_UUID_SIZE, clientCharCfgUUID },
-	    GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
-	    0, 
-	    (uint8 *)sprintronKeyfobOutOfRangeConfig 
-	  },
-/////////// Server beep status ////////////
+      // Client Tx Power Config
+      { 
+        { ATT_BT_UUID_SIZE, sprintronClientTxPowerUUID},
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+        0, 
+        (uint8 *)&sprintronClientTxPower
+      },
+}
+
+static gattAttribute_t sprintronAudioVisualAlertAttrTbl[] = 
+{
+  // Sprintron Audio Visual Alert Service
+  {
+    { ATT_BT_UUID_SIZE, primaryServiceUUID },
+    GATT_PERMIT_READ,
+    0,
+    (uint8 *)&sprintronAudioVisualAlertService
+  },
     // Characteristic Declaration
     {
       {ATT_BT_UUID_SIZE, characterUUID},
       GATT_PERMIT_READ,
       0,
-      (uint8 *)&sprintronKeyfobBeepStatusCharProps
+      (uint8 *)&sprintronAudioVisualAlertCharProps
     },
-	  // Server beep status
-	  { 
-	    { ATT_BT_UUID_SIZE, skBeepStatusUUID },
-	    GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
-	    0, 
-	    (uint8 *)&sprintronKeyfobBeepStatus 
-	  },
-};
+      // Client Tx Power Config
+      { 
+        { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertUUID},
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+        0, 
+        (uint8 *)&sprintronAudioVisualAlert
+      },
+}
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -260,7 +308,6 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
 /*********************************************************************
  * PROFILE CALLBACKS
  */
-// Prox Reporter Service Callbacks
 CONST gattServiceCBs_t sprintronKeyfobCBs =
 {
   sprintronKeyfob_ReadAttrCB,  // Read callback function pointer
@@ -288,18 +335,34 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
 {
   uint8 status = SUCCESS;
 
-  // Currently this profile only contain 1 service
-  if ( services & SPRINTRON_KEYFOB_SERVICE )
+  if ( services & SPRINTRON_RSSI_REPORT_SERVICE )
   {
-    // Initialize Client Characteristic Configuration attributes
-    GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronKeyfobServerRssiConfig );
+    GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronRssiReportConfig );
+    status = GATTServApp_RegisterService( sprintronRssiReportAttrTbl,
+                                          GATT_NUM_ATTRS( sprintronRssiReportAttrTbl ),
+                                          &sprintronKeyfobCBs);
+  }
 
-    GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronKeyfobOutOfRangeConfig );
+  if ( ( status == SUCCESS ) && ( services & SPRINTRON_PROXIMITY_ALERT_SERVICE ) )
+  {
+    GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronProximityAlertConfig );
+    status = GATTServApp_RegisterService( sprintronProximityAlertAttrTbl,
+                                          GATT_NUM_ATTRS( sprintronProximityAlertAttrTbl ),
+                                          &sprintronKeyfobCBs);
+  }
 
-    // Register Sprintron Keyfob attribute list and CBs with GATT Server App  
-    status = GATTServApp_RegisterService( sprintronKeyfobAttrTbl, 
-                                          GATT_NUM_ATTRS( sprintronKeyfobAttrTbl ),
-                                          &sprintronKeyfobCBs );
+  if ( ( status == SUCCESS ) && ( services & SPRINTRON_CLIENT_TX_POWER_SERVICE ) )
+  {
+    status = GATTServApp_RegisterService( sprintronClientTxPowerAttrTbl,
+                                          GATT_NUM_ATTRS( sprintronClientTxPowerAttrTbl ),
+                                          &sprintronKeyfobCBs);
+  }
+
+  if ( ( status == SUCCESS ) && ( services & SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE ) )
+  {
+    status = GATTServApp_RegisterService( sprintronAudioVisualAlertAttrTbl,
+                                          GATT_NUM_ATTRS( sprintronAudioVisualAlertAttrTbl ),
+                                          &sprintronKeyfobCBs);
   }
 
   return ( status );
@@ -350,14 +413,14 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
-    case SPRINTRON_KEYFOB_SERVER_RSSI:
+    case SPRINTRON_RSSI_REPORT:
       if ( len == sizeof ( int8 ) ) 
       {
-        sprintronKeyfobServerRssi = *((int8*)value);
+        sprintronRssiReport = *((int8*)value);
 		
         // See if Notification has been enabled
-        GATTServApp_ProcessCharCfg( sprintronKeyfobServerRssiConfig, (uint8 *)&sprintronKeyfobServerRssi, FALSE, 
-                                    sprintronKeyfobAttrTbl, GATT_NUM_ATTRS( sprintronKeyfobAttrTbl ),
+        GATTServApp_ProcessCharCfg( sprintronRssiReportConfig, (uint8 *)&sprintronRssiReport, FALSE, 
+                                    sprintronRssiReportAttrTbl, GATT_NUM_ATTRS( sprintronRssiReportAttrTbl ),
                                     INVALID_TASK_ID );
       }
       else
@@ -366,10 +429,10 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       }
       break;
 
-	case SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD:
+	case SPRINTRON_PROXIMITY_CONFIG:
       if ( len == sizeof ( int8 ) ) 
       {
-        sprintronKeyfobClientTxPower = *((int8*)value);
+        sprintronProximityConfig = *((int8*)value);
       }
       else
       {
@@ -377,26 +440,26 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       }
       break;
 
-    case SPRINTRON_KEYFOB_CLIENT_TX_POWER:
+    case SPRINTRON_PROXIMITY_ALERT:
+        if ( len == sizeof ( uint8 ) )
+        {
+          sprintronProximityAlert = *((uint8*)value);
+          
+          // See if Notification has been enabled
+          GATTServApp_ProcessCharCfg( sprintronProximityAlertConfig, (uint8 *)&sprintronProximityAlert, FALSE, 
+                                      sprintronProximityAlertAttrTbl, GATT_NUM_ATTRS( sprintronProximityAlertAttrTbl ),
+                                      INVALID_TASK_ID );
+        }
+        else
+        {
+          ret = bleInvalidRange;
+        }
+        break;
+
+    case SPRINTRON_CLIENT_TX_POWER:
       if ( len == sizeof ( int8 ) ) 
       {
-        sprintronKeyfobOutOfRangeThreshold = *((int8*)value);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
-	  
-	case SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS:
-      if ( len == sizeof ( uint8 ) )
-      {
-        sprintronKeyfobOutOfRangeStatus = *((uint8*)value);
-		
-        // See if Notification has been enabled
-        GATTServApp_ProcessCharCfg( sprintronKeyfobOutOfRangeConfig, (uint8 *)&sprintronKeyfobOutOfRangeStatus, FALSE, 
-                                    sprintronKeyfobAttrTbl, GATT_NUM_ATTRS( sprintronKeyfobAttrTbl ),
-                                    INVALID_TASK_ID );
+        sprintronClientTxPower = *((int8*)value);
       }
       else
       {
@@ -404,10 +467,10 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       }
       break;
 
-	case SPRINTRON_KEYFOB_BEEP_STATUS:
+	case SPRINTRON_AUDIO_VISUAL_ALERT:
       if ( len == sizeof ( uint8 ) )
       {
-        sprintronKeyfobBeepStatus = *((uint8*)value);
+        sprintronAudioVisualAlert = *((uint8*)value);
       }
       else
       {
@@ -441,24 +504,24 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
-    case SPRINTRON_KEYFOB_SERVER_RSSI:
-      *((int8*)value) = sprintronKeyfobServerRssi;
+    case SPRINTRON_RSSI_REPORT:
+      *((int8*)value) = sprintronRssiReport;
       break;
       
-    case SPRINTRON_KEYFOB_CLIENT_TX_POWER:
-      *((int8*)value) = sprintronKeyfobClientTxPower;
+    case SPRINTRON_PROXIMITY_CONFIG:
+      *((int8*)value) = sprintronProximityConfig;
       break;
       
-    case SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD:
-      *((int8*)value) = sprintronKeyfobOutOfRangeThreshold;
+    case SPRINTRON_PROXIMITY_ALERT:
+      *((int8*)value) = sprintronProximityAlert;
       break;
 
-    case SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS:
-      *((uint8*)value) = sprintronKeyfobOutOfRangeStatus;
+    case SPRINTRON_CLIENT_TX_POWER:
+      *((uint8*)value) = sprintronClientTxPower;
       break;
 
-    case SPRINTRON_KEYFOB_BEEP_STATUS:
-      *((uint8*)value) = sprintronKeyfobBeepStatus;
+    case SPRINTRON_AUDIO_VISUAL_ALERT:
+      *((uint8*)value) = sprintronAudioVisualAlert;
       break;
 
     default:
@@ -499,11 +562,11 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
     {
       // No need for "GATT_SERVICE_UUID" or "GATT_CLIENT_CHAR_CFG_UUID" cases;
       // gattserverapp handles those types for reads 
-      case SPRINTRON_KEYFOB_SERVER_RSSI_UUID:
-      case SPRINTRON_KEYFOB_CLIENT_TX_POWER_UUID:
-      case SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD_UUID:
-      case SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS_UUID:
-      case SPRINTRON_KEYFOB_BEEP_STATUS_UUID:
+      case SPRINTRON_RSSI_REPORT_UUID:
+      case SPRINTRON_PROXIMITY_CONFIG_UUID:
+      case SPRINTRON_PROXIMITY_ALERT_UUID:
+      case SPRINTRON_CLIENT_TX_POWER_UUID:
+      case SPRINTRON_AUDIO_VISUAL_ALERT_UUID:
         *pLen = 1;
         pValue[0] = *pAttr->pValue;
         break;
@@ -547,8 +610,8 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
     uint16 uuid = BUILD_UINT16( pAttr->type.uuid[0], pAttr->type.uuid[1]);
     switch ( uuid )
     {
-      case SPRINTRON_KEYFOB_CLIENT_TX_POWER_UUID:
-      case SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD_UUID:
+      case SPRINTRON_CLIENT_TX_POWER_UUID:
+      case SPRINTRON_PROXIMITY_CONFIG_UUID:
         // Validate the value
         // Make sure it's not a blob operation
         if ( offset == 0 )
@@ -567,15 +630,15 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
           int8 *pCurValue = (int8 *)pAttr->pValue;
           
           *pCurValue = pValue[0];
-          if ( (int8 *)pAttr->pValue == &sprintronKeyfobClientTxPower )
-            notify = SPRINTRON_KEYFOB_CLIENT_TX_POWER;   
-          else // if ( pAttr->pValue == &sprintronKeyfobOutOfRangeThreshold )
-            notify = SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD;     			
+          if ( (int8 *)pAttr->pValue == &sprintronClientTxPower )
+            notify = SPRINTRON_CLIENT_TX_POWER;   
+          else // if ( pAttr->pValue == &sprintronProximityConfig )
+            notify = SPRINTRON_PROXIMITY_CONFIG;     			
         }
         
         break;
 
-      case SPRINTRON_KEYFOB_BEEP_STATUS_UUID:
+      case SPRINTRON_AUDIO_VISUAL_ALERT_UUID:
         // Validate the value
         // Make sure it's not a blob operation
         if ( offset == 0 )
@@ -599,7 +662,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
           uint8 *pCurValue = (uint8 *)pAttr->pValue;
           
           *pCurValue = pValue[0];
-          notify = SPRINTRON_KEYFOB_BEEP_STATUS;    			
+          notify = SPRINTRON_AUDIO_VISUAL_ALERT;    			
         }
         
         break;

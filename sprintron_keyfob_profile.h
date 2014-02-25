@@ -53,37 +53,43 @@ extern "C"
  * CONSTANTS
  */
 
-// Profile Parameters
-#define SPRINTRON_KEYFOB_SERVER_RSSI                    0  // RW int8 - Profile Attribute value
-#define SPRINTRON_KEYFOB_CLIENT_TX_POWER                1  // RW int8 - Profile Attribute value
-#define SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD         2  // RW int8 - Profile Attribute value
-#define SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS            3  // RW uint8 - Profile Attribute value
-#define SPRINTRON_KEYFOB_BEEP_STATUS                    4  // RW uint8 - Profile Attribute value
+// Profile Parameters - used by set parameter & get parameter functions
+#define SPRINTRON_RSSI_REPORT                           0
+#define SPRINTRON_PROXIMITY_CONFIG                      1
+#define SPRINTRON_PROXIMITY_ALERT                       2
+#define SPRINTRON_CLIENT_TX_POWER                       3
+#define SPRINTRON_AUDIO_VISUAL_ALERT                    4
 
 // Sprintron Keyfob character value define
-#define SERVER_RSSI_DEFAULT_VALUE                       0xFF
+#define RSSI_REPORT_DEFAULT_VALUE                       0xFF
 
-#define CLIENT_TX_POWER_DEFAULT_VALUE                   0xFF
+#define PROXIMITY_CONFIG_DEFAULT_VALUE                  0x0
+#define PROXIMITY_ALERT_IN_RANGE                        0x0
+#define PROXIMITY_ALERT_OUT_OF_RANGE                    0x1
 
-#define OUT_OF_RANGE_THRESHOLD_DEFAULT_VALUE            0xFF
+#define PROXIMITY_CLIENT_TX_POWER_DEFAULT_VALUE         0x0
 
-#define OUT_OF_RANGE_STATUS_IN_RANGE                    0x0
-#define OUT_OF_RANGE_STATUS_OUT_OF_RANGE                0x1
+#define AUDIO_VISUAL_ALERT_OFF                          0x0
+#define AUDIO_VISUAL_ALERT_ON                           0x1
 
-#define BEEP_STATUS_NONE                                0x0
-#define BEEP_STATUS_LOW                                 0x1
-#define BEEP_STATUS_HIGH                                0x2
+// Sprintron Service UUID
+#define SPRINTRON_RSSI_REPORT_SERVICE_UUID              0xFFA1
+#define SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID          0xFFA2
+#define SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID          0xFFA4
+#define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID       0xFFA5
 
-// Sprintron Keyfob private UUIDs
-#define SPRINTRON_KEYFOB_SERVICE_UUID                   0xFFF1
-#define SPRINTRON_KEYFOB_SERVER_RSSI_UUID               0xFFF2
-#define SPRINTRON_KEYFOB_CLIENT_TX_POWER_UUID           0xFFF3
-#define SPRINTRON_KEYFOB_OUT_OF_RANGE_THRESHOLD_UUID    0xFFF4
-#define SPRINTRON_KEYFOB_OUT_OF_RANGE_STATUS_UUID       0xFFF5
-#define SPRINTRON_KEYFOB_BEEP_STATUS_UUID               0xFFF6
+// Sprintron Char UUID
+#define SPRINTRON_RSSI_REPORT_UUID                      0xFFC1
+#define SPRINTRON_PROXIMITY_ALERT_UUID                  0xFFC2
+#define SPRINTRON_PROXIMITY_CONFIG_UUID                 0xFFC3
+#define SPRINTRON_CLIENT_TX_POWER_UUID                  0xFFC4
+#define SPRINTRON_AUDIO_VISUAL_ALERT_UUID               0xFFC5
 
-// Proximity Profile Services bit fields
-#define SPRINTRON_KEYFOB_SERVICE                        0x00000001 // Sprintron Keyfob Service
+// Sprintron Keyfob Profile Services bit fields
+#define SPRINTRON_RSSI_REPORT_SERVICE                   0x00000001
+#define SPRINTRON_PROXIMITY_ALERT_SERVICE               0x00000002
+#define SPRINTRON_CLIENT_TX_POWER_SERVICE               0x00000004
+#define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE            0x00000008
 
 /*********************************************************************
  * TYPEDEFS
