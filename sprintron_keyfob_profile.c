@@ -164,7 +164,7 @@ static gattCharCfg_t sprintronRssiValueConfig[GATT_MAX_NUM_CONN];
 
 static uint8 sprintronProximityConfigCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static int8 sprintronProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;
-static uint8 sprintronProximityAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
+static uint8 sprintronProximityAlertCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
 static uint8 sprintronProximityAlert = PROXIMITY_ALERT_IN_RANGE;
 static gattCharCfg_t sprintronProximityAlertConfig[GATT_MAX_NUM_CONN];
 
@@ -248,8 +248,8 @@ static gattAttribute_t sprintronProximityAlertAttrTbl[] =
       // Proximity Alert
       { 
         { ATT_BT_UUID_SIZE, sprintronProximityAlertUUID},
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
-        0, 
+        GATT_PERMIT_READ, 
+        0,
         (uint8 *)&sprintronProximityAlert
       },
         // Characteristic configuration
