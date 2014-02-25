@@ -105,22 +105,34 @@ CONST uint8 sprintronClientTxPowerServiceUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16( SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID ), HI_UINT16( SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID )
 };
 
-// Sprintron Proximity Alert UUID
+// Sprintron Client Tx Power UUID
 CONST uint8 sprintronClientTxPowerUUID[ATT_BT_UUID_SIZE] =
 { 
   LO_UINT16( SPRINTRON_CLIENT_TX_POWER_UUID ), HI_UINT16( SPRINTRON_CLIENT_TX_POWER_UUID )
 };
 
-// Sprintron Client Tx Power Service UUID
+// Sprintron Client Audio Visual Alert Service UUID
 CONST uint8 sprintronAudioVisualAlertServiceUUID[ATT_BT_UUID_SIZE] =
 { 
   LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID ), HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID )
 };
 
-// Sprintron Proximity Alert UUID
+// Sprintron Audio Visual Alert UUID
 CONST uint8 sprintronAudioVisualAlertUUID[ATT_BT_UUID_SIZE] =
 { 
   LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID ), HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID )
+};
+
+// Sprintron Connection Update Service UUID
+CONST uint8 sprintronConnectionUpdateServiceUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID ), HI_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID )
+};
+
+// Sprintron Connection Parameters UUID
+CONST uint8 sprintronConnectionParametersUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_CONNECTION_PARAMETERS_UUID ), HI_UINT16( SPRINTRON_CONNECTION_PARAMETERS_UUID )
 };
 
 /*********************************************************************
@@ -144,6 +156,7 @@ static CONST gattAttrType_t sprintronRssiReportService = { ATT_BT_UUID_SIZE, spr
 static CONST gattAttrType_t sprintronProximityAlertService = { ATT_BT_UUID_SIZE, sprintronProximityAlertServiceUUID };
 static CONST gattAttrType_t sprintronClientTxPowerService = { ATT_BT_UUID_SIZE, sprintronClientTxPowerServiceUUID };
 static CONST gattAttrType_t sprintronAudioVisualAlertService = { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertServiceUUID };
+static CONST gattAttrType_t sprintronConnectionUpdateService = { ATT_BT_UUID_SIZE, sprintronConnectionUpdateServiceUUID };
 
 static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
 static int8 sprintronRssiValue = RSSI_VALUE_DEFAULT_VALUE;
@@ -160,6 +173,11 @@ static int8 sprintronClientTxPower = CLIENT_TX_POWER_DEFAULT_VALUE;
 
 static uint8 sprintronAudioVisualAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint8 sprintronAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
+
+static uint8 sprintronConnectionParametersCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
+static uint16 sprintronConnectionParameters[3] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
+                                                   SUPERVISION_TIMEOUT_DEFAULT_VALUE,
+                                                   SLAVE_LATENCY_DEFAULT_VALUE };
 
 /*********************************************************************
  * Profile Attributes - Table
@@ -259,7 +277,7 @@ static gattAttribute_t sprintronClientTxPowerAttrTbl[] =
       0,
       (uint8 *)&sprintronClientTxPowerCharProps
     },
-      // Client Tx Power Config
+      // Client Tx Power
       { 
         { ATT_BT_UUID_SIZE, sprintronClientTxPowerUUID},
         GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
@@ -284,12 +302,37 @@ static gattAttribute_t sprintronAudioVisualAlertAttrTbl[] =
       0,
       (uint8 *)&sprintronAudioVisualAlertCharProps
     },
-      // Client Tx Power Config
+      // Audio Visual Alert
       { 
         { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertUUID},
         GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
         0, 
         (uint8 *)&sprintronAudioVisualAlert
+      },
+}
+
+static gattAttribute_t sprintronConnectionUpdateAttrTbl[] = 
+{
+  // Sprintron Connection Update Service
+  {
+    { ATT_BT_UUID_SIZE, primaryServiceUUID },
+    GATT_PERMIT_READ,
+    0,
+    (uint8 *)&sprintronConnectionUpdateService
+  },
+    // Characteristic Declaration
+    {
+      {ATT_BT_UUID_SIZE, characterUUID},
+      GATT_PERMIT_READ,
+      0,
+      (uint8 *)&sprintronConnectionParametersCharProps
+    },
+      // Connection Parameters
+      { 
+        { ATT_BT_UUID_SIZE, sprintronConnectionParametersUUID},
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+        0, 
+        (uint8 *)sprintronConnectionParameters
       },
 }
 
@@ -361,6 +404,13 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
                                           &sprintronKeyfobCBs);
   }
 
+  if ( ( status == SUCCESS ) && ( services & SPRINTRON_CONNECTION_UPDATE_SERVICE ) )
+  {
+    status = GATTServApp_RegisterService( sprintronConnectionUpdateAttrTbl,
+                                          GATT_NUM_ATTRS( sprintronConnectionUpdateAttrTbl ),
+                                          &sprintronKeyfobCBs);
+  }
+
   return ( status );
 }
 
@@ -409,7 +459,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
-    case SPRINTRON_RSSI_REPORT:
+    case SPRINTRON_RSSI_VALUE:
       if ( len == sizeof ( int8 ) ) 
       {
         sprintronRssiValue = *((int8*)value);
@@ -437,20 +487,20 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
     case SPRINTRON_PROXIMITY_ALERT:
-        if ( len == sizeof ( uint8 ) )
-        {
-          sprintronProximityAlert = *((uint8*)value);
-          
-          // See if Notification has been enabled
-          GATTServApp_ProcessCharCfg( sprintronProximityAlertConfig, (uint8 *)&sprintronProximityAlert, FALSE, 
-                                      sprintronProximityAlertAttrTbl, GATT_NUM_ATTRS( sprintronProximityAlertAttrTbl ),
-                                      INVALID_TASK_ID );
-        }
-        else
-        {
-          ret = bleInvalidRange;
-        }
-        break;
+      if ( len == sizeof ( uint8 ) )
+      {
+        sprintronProximityAlert = *((uint8*)value);
+        
+        // See if Notification has been enabled
+        GATTServApp_ProcessCharCfg( sprintronProximityAlertConfig, (uint8 *)&sprintronProximityAlert, FALSE, 
+                                    sprintronProximityAlertAttrTbl, GATT_NUM_ATTRS( sprintronProximityAlertAttrTbl ),
+                                    INVALID_TASK_ID );
+      }
+      else
+      {
+        ret = bleInvalidRange;
+      }
+      break;
 
     case SPRINTRON_CLIENT_TX_POWER:
       if ( len == sizeof ( int8 ) ) 
@@ -467,6 +517,17 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       if ( len == sizeof ( uint8 ) )
       {
         sprintronAudioVisualAlert = *((uint8*)value);
+      }
+      else
+      {
+        ret = bleInvalidRange;
+      }
+      break;
+
+	case SPRINTRON_CONNECTION_PARAMETERS:
+      if ( len == sizeof ( sprintronConnectionParameters ) )
+      {
+        osal_memcpy(sprintronConnectionParameters, value, len);
       }
       else
       {
@@ -520,6 +581,10 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
       *((uint8*)value) = sprintronAudioVisualAlert;
       break;
 
+    case SPRINTRON_CONNECTION_PARAMETERS:
+      osal_memcpy(value, sprintronConnectionParameters, sizeof(sprintronConnectionParameters));
+      break;
+
     default:
       ret = INVALIDPARAMETER;
       break;
@@ -566,7 +631,12 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
         *pLen = 1;
         pValue[0] = *pAttr->pValue;
         break;
-      
+        
+      case SPRINTRON_CONNECTION_PARAMETERS_UUID:
+        *pLen = sizeof(sprintronConnectionParameters);
+        osal_memcpy(pValue, sprintronConnectionParameters, *pLen);
+        break;
+        
       default:
         // Should never get here!
         *pLen = 0;
@@ -607,62 +677,58 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
     switch ( uuid )
     {
       case SPRINTRON_CLIENT_TX_POWER_UUID:
-      case SPRINTRON_PROXIMITY_CONFIG_UUID:
-        // Validate the value
-        // Make sure it's not a blob operation
-        if ( offset == 0 )
+        if (len > 1)
         {
-          if ( len > 1 )
-            status = ATT_ERR_INVALID_VALUE_SIZE;
+          status = ATT_ERR_INVALID_VALUE_SIZE;
         }
         else
         {
-          status = ATT_ERR_ATTR_NOT_LONG;
-        }
-        
-        //Write the value
-        if ( status == SUCCESS )
-        {
+          //Write the value
           int8 *pCurValue = (int8 *)pAttr->pValue;
-          
           *pCurValue = pValue[0];
-          if ( (int8 *)pAttr->pValue == &sprintronClientTxPower )
-            notify = SPRINTRON_CLIENT_TX_POWER;   
-          else // if ( pAttr->pValue == &sprintronProximityConfig )
-            notify = SPRINTRON_PROXIMITY_CONFIG;     			
+          notify = SPRINTRON_CLIENT_TX_POWER;             
         }
-        
+        break;
+
+      case SPRINTRON_PROXIMITY_CONFIG_UUID:
+        if (len > 1)
+        {
+          status = ATT_ERR_INVALID_VALUE_SIZE;
+        }
+        else
+        {
+          //Write the value
+          int8 *pCurValue = (int8 *)pAttr->pValue;
+          *pCurValue = pValue[0];
+          notify = SPRINTRON_PROXIMITY_CONFIG;     			
+        }
         break;
 
       case SPRINTRON_AUDIO_VISUAL_ALERT_UUID:
-        // Validate the value
-        // Make sure it's not a blob operation
-        if ( offset == 0 )
+        if (len > 1)
         {
-          if ( len > 1 )
-            status = ATT_ERR_INVALID_VALUE_SIZE;
-          else
-          {
-            if ( pValue[0] > BEEP_STATUS_HIGH )
-              status = ATT_ERR_INVALID_VALUE;
-          }
+          status = ATT_ERR_INVALID_VALUE_SIZE;
         }
         else
         {
-          status = ATT_ERR_ATTR_NOT_LONG;
-        }
-        
-        //Write the value
-        if ( status == SUCCESS )
-        {
           uint8 *pCurValue = (uint8 *)pAttr->pValue;
-          
           *pCurValue = pValue[0];
           notify = SPRINTRON_AUDIO_VISUAL_ALERT;    			
         }
-        
         break;
 
+      case SPRINTRON_CONNECTION_PARAMETERS_UUID:
+        if ( len > sizeof(sprintronConnectionParameters) )
+        {
+          status = ATT_ERR_INVALID_VALUE_SIZE;
+        }
+        else
+        {  
+          uint8 *pCurValue = (uint8 *)pAttr->pValue;
+          osal_memcpy(pCurValue, sprintronConnectionParameters, len);
+        }
+        break;
+        
       case GATT_CLIENT_CHAR_CFG_UUID:
         status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
                                                  offset, GATT_CLIENT_CFG_NOTIFY | GATT_CLIENT_CFG_INDICATE );

@@ -59,9 +59,10 @@ extern "C"
 #define SPRINTRON_PROXIMITY_ALERT                       2
 #define SPRINTRON_CLIENT_TX_POWER                       3
 #define SPRINTRON_AUDIO_VISUAL_ALERT                    4
+#define SPRINTRON_CONNECTION_PARAMETERS                 5
 
 // Sprintron Keyfob character value define
-#define RSSI_VALUE_DEFAULT_VALUE                       0xFF
+#define RSSI_VALUE_DEFAULT_VALUE                        0xFF
 
 #define PROXIMITY_CONFIG_DEFAULT_VALUE                  0x0
 #define PROXIMITY_ALERT_IN_RANGE                        0x0
@@ -73,11 +74,16 @@ extern "C"
 #define AUDIO_VISUAL_ALERT_LOW                          0x1
 #define AUDIO_VISUAL_ALERT_HIGH                         0x2
 
+#define CONNECTION_INTERVAL_DEFAULT_VALUE               0x1F4
+#define SUPERVISION_TIMEOUT_DEFAULT_VALUE               0x1388
+#define SLAVE_LATENCY_DEFAULT_VALUE                     0x0
+
 // Sprintron Service UUID
 #define SPRINTRON_RSSI_REPORT_SERVICE_UUID              0xFFA1
 #define SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID          0xFFA2
 #define SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID          0xFFA4
 #define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID       0xFFA5
+#define SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID        0xFFA6
 
 // Sprintron Char UUID
 #define SPRINTRON_RSSI_VALUE_UUID                       0xFFC1
@@ -85,12 +91,14 @@ extern "C"
 #define SPRINTRON_PROXIMITY_CONFIG_UUID                 0xFFC3
 #define SPRINTRON_CLIENT_TX_POWER_UUID                  0xFFC4
 #define SPRINTRON_AUDIO_VISUAL_ALERT_UUID               0xFFC5
+#define SPRINTRON_CONNECTION_PARAMETERS_UUID            0xFFC6
 
 // Sprintron Keyfob Profile Services bit fields
 #define SPRINTRON_RSSI_REPORT_SERVICE                   0x00000001
 #define SPRINTRON_PROXIMITY_ALERT_SERVICE               0x00000002
 #define SPRINTRON_CLIENT_TX_POWER_SERVICE               0x00000004
 #define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE            0x00000008
+#define SPRINTRON_CONNECTION_UPDATE_SERVICE             0x00000010
 
 /*********************************************************************
  * TYPEDEFS
