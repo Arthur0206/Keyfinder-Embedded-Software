@@ -54,20 +54,20 @@ extern "C"
  */
 
 // Profile Parameters - used by set parameter & get parameter functions
-#define SPRINTRON_RSSI_REPORT                           0
+#define SPRINTRON_RSSI_VALUE                            0
 #define SPRINTRON_PROXIMITY_CONFIG                      1
 #define SPRINTRON_PROXIMITY_ALERT                       2
 #define SPRINTRON_CLIENT_TX_POWER                       3
 #define SPRINTRON_AUDIO_VISUAL_ALERT                    4
 
 // Sprintron Keyfob character value define
-#define RSSI_REPORT_DEFAULT_VALUE                       0xFF
+#define RSSI_VALUE_DEFAULT_VALUE                       0xFF
 
 #define PROXIMITY_CONFIG_DEFAULT_VALUE                  0x0
 #define PROXIMITY_ALERT_IN_RANGE                        0x0
 #define PROXIMITY_ALERT_OUT_OF_RANGE                    0x1
 
-#define PROXIMITY_CLIENT_TX_POWER_DEFAULT_VALUE         0x0
+#define CLIENT_TX_POWER_DEFAULT_VALUE                   0x0
 
 #define AUDIO_VISUAL_ALERT_OFF                          0x0
 #define AUDIO_VISUAL_ALERT_LOW                          0x1
@@ -80,7 +80,7 @@ extern "C"
 #define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID       0xFFA5
 
 // Sprintron Char UUID
-#define SPRINTRON_RSSI_REPORT_UUID                      0xFFC1
+#define SPRINTRON_RSSI_VALUE_UUID                       0xFFC1
 #define SPRINTRON_PROXIMITY_ALERT_UUID                  0xFFC2
 #define SPRINTRON_PROXIMITY_CONFIG_UUID                 0xFFC3
 #define SPRINTRON_CLIENT_TX_POWER_UUID                  0xFFC4

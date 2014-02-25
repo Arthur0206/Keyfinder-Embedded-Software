@@ -167,7 +167,7 @@ static uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 static gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
-static int8 keyfobRssiReport = RSSI_REPORT_DEFAULT_VALUE;     // rssi default value
+static int8 keyfobRssiValue = RSSI_VALUE_DEFAULT_VALUE;     // rssi default value
 static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE;  // Tx Power Level (0dBm default)
 static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;     // 0xFF
 static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;     // default in range
@@ -282,7 +282,7 @@ static bool isProximityAlertToggleNeeded()
   uint8 old_status;
   sprintronKeyfob_GetParameter( SPRINTRON_PROXIMITY_ALERT, &old_status );
   
-  if (keyfobClientTxPwr - keyfobRssiReport <= keyfobProximityConfig)
+  if (keyfobClientTxPwr - keyfobRssiValue <= keyfobProximityConfig)
   {
     new_status = PROXIMITY_ALERT_IN_RANGE;
   }
@@ -310,8 +310,8 @@ static bool isProximityAlertToggleNeeded()
 
 static void updateProximityAlert( int8 newRSSI )
 {
-  keyfobRssiReport = newRSSI;
-  sprintronKeyfob_SetParameter( SPRINTRON_RSSI_REPORT,  sizeof ( int8 ), &keyfobRssiReport );
+  keyfobRssiValue = newRSSI;
+  sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
     
   // To do - set this value only when status changes.
   if ( isProximityAlertToggleNeeded() ) 
@@ -502,7 +502,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     osal_start_timerEx( keyfobapp_TaskID, KFD_BATTERY_CHECK_EVT, BATTERY_CHECK_PERIOD );
 
     //Set the proximity attribute values to default
-    sprintronKeyfob_SetParameter( SPRINTRON_RSSI_REPORT,  sizeof ( int8 ), &keyfobRssiReport );
+    sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_CONFIG,  sizeof ( int8 ), &keyfobProximityConfig );
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
     sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );

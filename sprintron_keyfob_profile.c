@@ -149,9 +149,9 @@ static CONST gattAttrType_t sprintronProximityAlertService = { ATT_BT_UUID_SIZE,
 static CONST gattAttrType_t sprintronClientTxPowerService = { ATT_BT_UUID_SIZE, sprintronClientTxPowerServiceUUID };
 static CONST gattAttrType_t sprintronAudioVisualAlertService = { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertServiceUUID };
 
-static uint8 sprintronRssiReportCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
-static int8 sprintronRssiReport = RSSI_REPORT_DEFAULT_VALUE;
-static gattCharCfg_t sprintronRssiReportConfig[GATT_MAX_NUM_CONN];
+static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
+static int8 sprintronRssiValue = RSSI_VALUE_DEFAULT_VALUE;
+static gattCharCfg_t sprintronRssiValueConfig[GATT_MAX_NUM_CONN];
 
 static uint8 sprintronProximityConfigCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static int8 sprintronProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;
@@ -160,7 +160,7 @@ static uint8 sprintronProximityAlert = PROXIMITY_ALERT_IN_RANGE;
 static gattCharCfg_t sprintronProximityAlertConfig[GATT_MAX_NUM_CONN];
 
 static uint8 sprintronClientTxPowerCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
-static int8 sprintronClientTxPower = PROXIMITY_CLIENT_TX_POWER_DEFAULT_VALUE;
+static int8 sprintronClientTxPower = CLIENT_TX_POWER_DEFAULT_VALUE;
 
 static uint8 sprintronAudioVisualAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint8 sprintronAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
@@ -183,21 +183,21 @@ static gattAttribute_t sprintronRssiReportAttrTbl[] =
       {ATT_BT_UUID_SIZE, characterUUID},
 	  GATT_PERMIT_READ,
 	  0,
-	  (uint8 *)&sprintronRssiReportCharProps
+	  (uint8 *)&sprintronRssiValueCharProps
     },
       // Rssi Report
       { 
         { ATT_BT_UUID_SIZE, sprintronRssiReportUUID},
         GATT_PERMIT_READ, 
         0, 
-        (uint8 *)&sprintronRssiReport
+        (uint8 *)&sprintronRssiValue
       },
         // Characteristic configuration
         { 
           { ATT_BT_UUID_SIZE, clientCharCfgUUID },
           GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
           0, 
-          (uint8 *)sprintronRssiReportConfig 
+          (uint8 *)sprintronRssiValueConfig
         },
 }
 
@@ -337,7 +337,7 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
 
   if ( services & SPRINTRON_RSSI_REPORT_SERVICE )
   {
-    GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronRssiReportConfig );
+    GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronRssiValueConfig );
     status = GATTServApp_RegisterService( sprintronRssiReportAttrTbl,
                                           GATT_NUM_ATTRS( sprintronRssiReportAttrTbl ),
                                           &sprintronKeyfobCBs);
@@ -416,10 +416,10 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
     case SPRINTRON_RSSI_REPORT:
       if ( len == sizeof ( int8 ) ) 
       {
-        sprintronRssiReport = *((int8*)value);
+        sprintronRssiValue = *((int8*)value);
 		
         // See if Notification has been enabled
-        GATTServApp_ProcessCharCfg( sprintronRssiReportConfig, (uint8 *)&sprintronRssiReport, FALSE, 
+        GATTServApp_ProcessCharCfg( sprintronRssiValueConfig, (uint8 *)&sprintronRssiValue, FALSE, 
                                     sprintronRssiReportAttrTbl, GATT_NUM_ATTRS( sprintronRssiReportAttrTbl ),
                                     INVALID_TASK_ID );
       }
@@ -505,7 +505,7 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
   switch ( param )
   {
     case SPRINTRON_RSSI_REPORT:
-      *((int8*)value) = sprintronRssiReport;
+      *((int8*)value) = sprintronRssiValue;
       break;
       
     case SPRINTRON_PROXIMITY_CONFIG:
