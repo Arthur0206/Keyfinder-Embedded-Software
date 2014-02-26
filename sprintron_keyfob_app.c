@@ -375,8 +375,6 @@ void KeyFobApp_Init( uint8 task_id )
     uint8 initial_advertising_enable = FALSE;
 #endif
 
-	uint8 ownAddress[B_ADDR_LEN];
-
     // When in limited adv mode, use this variable to set adv periodical interval.
     // when set to 0. adv won't restart periodically. To change adv last time, use 
     // GAP_SetParamValue(TGAP_LIM_ADV_TIMEOUT, 180);	
@@ -405,16 +403,6 @@ void KeyFobApp_Init( uint8 task_id )
     GAPRole_SetParameter( GAPROLE_RSSI_READ_RATE, sizeof( uint16 ), &desired_rssi_read_rate );
 
     GAPRole_SetParameter( GAPROLE_SCAN_RSP_DATA, sizeof ( deviceName ), deviceName );
-
-    // put BD addr into ADV data
-    GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddress);
-
-    advertData[5] = ownAddress[0];
-    advertData[6] = ownAddress[1];
-    advertData[7] = ownAddress[2];
-    advertData[8] = ownAddress[3];
-    advertData[9] = ownAddress[4];
-    advertData[10] = ownAddress[5];
 
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
   
@@ -523,6 +511,8 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
   if ( events & KFD_START_DEVICE_EVT )
   {
+    uint8 ownAddress[B_ADDR_LEN];
+
     // Start the Device
     VOID GAPRole_StartDevice( &keyFob_PeripheralCBs );
 
@@ -531,6 +521,18 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
     // Start the Proximity Profile
     VOID sprintronKeyfob_RegisterAppCBs( &keyFob_ProfileCBs );
+
+    // put BD addr into ADV data
+    GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddress);
+
+    advertData[5] = ownAddress[0];
+    advertData[6] = ownAddress[1];
+    advertData[7] = ownAddress[2];
+    advertData[8] = ownAddress[3];
+    advertData[9] = ownAddress[4];
+    advertData[10] = ownAddress[5];
+
+    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
 
     // Set timer for first battery read event
     osal_start_timerEx( keyfobapp_TaskID, KFD_BATTERY_CHECK_EVT, BATTERY_CHECK_PERIOD );
