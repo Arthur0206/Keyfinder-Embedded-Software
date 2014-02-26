@@ -614,6 +614,21 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 #endif
 
 #ifdef USE_WHITE_LIST_ADV 
+  if (events & KFD_NON_WHITELIST_START_EVT)
+  {
+    uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
+    uint8 turnOnAdv = TRUE;
+
+    // set adv filter policy to accept connection and scan request from all devices
+    GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
+
+    // turn on adv
+    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
+
+    // set a 30s timer for stopping the non-whitelist adv state.
+    osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, 30000 );
+  }
+
   if (events & KFD_NON_WHITELIST_STOP_EVT)
   {
     uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
@@ -695,22 +710,12 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
     // if device is not in a connection, pression the right key should change adv police to not use whitelist.
     if ( gapProfileState != GAPROLE_CONNECTED )
     {
-      uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
-      uint8 turnOnAdv;
+      uint8 turnOnAdv = FALSE;
 
       // turn off adv first
-      turnOnAdv = FALSE;
       GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
 
-      // set adv filter policy to accept connection and scan request from all devices
-      GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
-
-      // turn on adv
-      turnOnAdv = TRUE;
-      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
-
-      // set a 30s timer for stopping the non-whitelist adv state.
-      osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, 30000 );
+      osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_START_EVT, 1000 );
     }
 #else //USE_WHITE_LIST_ADV
     // if device is not in a connection, pressing the right key should toggle
