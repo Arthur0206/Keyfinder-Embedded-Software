@@ -654,7 +654,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
     }
 
-    // Turn off LED that shows we're advertising
+    // Turn off LED2 and remains LED1 on, to show that we're advertising with whitelist. 
     HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
   }
 #endif
@@ -866,6 +866,11 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           // Visual feedback that we are advertising to all devices (not using whitelist).
           HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
         }
+		else 
+		{
+	      // Visual feedback that we are advertising to devices in whitelist.
+		  HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+		}
       }
       break;
       
@@ -889,7 +894,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           osal_start_timerEx( keyfobapp_TaskID, KFD_ADV_IN_CONNECTION_EVT, ADV_IN_CONN_WAIT );
         #endif
 
-        // Turn off LED that shows we're advertising
+        // Turn off LED2 and remains LED1 on to show that we're advertising with whitelist.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
       }
       break;
@@ -907,7 +912,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           keyfobapp_StopAlert();
         }
 
-        // Turn off LED that shows we're advertising
+        // Turn off LED2 and remains LED1 on to show that we're advertising with whitelist.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
       }
       break;
