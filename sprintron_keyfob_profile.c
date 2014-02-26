@@ -213,7 +213,7 @@ static gattAttribute_t sprintronRssiReportAttrTbl[] =
           0, 
           (uint8 *)sprintronRssiValueConfig
         },
-}
+};
 
 static gattAttribute_t sprintronProximityAlertAttrTbl[] = 
 {
@@ -259,7 +259,7 @@ static gattAttribute_t sprintronProximityAlertAttrTbl[] =
           0, 
           (uint8 *)sprintronProximityAlertConfig 
         },
-}
+};
 
 static gattAttribute_t sprintronClientTxPowerAttrTbl[] = 
 {
@@ -284,7 +284,7 @@ static gattAttribute_t sprintronClientTxPowerAttrTbl[] =
         0, 
         (uint8 *)&sprintronClientTxPower
       },
-}
+};
 
 static gattAttribute_t sprintronAudioVisualAlertAttrTbl[] = 
 {
@@ -309,7 +309,7 @@ static gattAttribute_t sprintronAudioVisualAlertAttrTbl[] =
         0, 
         (uint8 *)&sprintronAudioVisualAlert
       },
-}
+};
 
 static gattAttribute_t sprintronConnectionUpdateAttrTbl[] = 
 {
@@ -334,7 +334,7 @@ static gattAttribute_t sprintronConnectionUpdateAttrTbl[] =
         0, 
         (uint8 *)sprintronConnectionParameters
       },
-}
+};
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -561,7 +561,7 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
-    case SPRINTRON_RSSI_REPORT:
+    case SPRINTRON_RSSI_VALUE:
       *((int8*)value) = sprintronRssiValue;
       break;
       

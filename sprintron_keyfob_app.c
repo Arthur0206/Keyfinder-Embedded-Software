@@ -75,6 +75,7 @@
 
 #include "devinfoservice.h"
 #include "battservice.h"
+#include "Proxreporter.h"
 #include "sprintron_keyfob_profile.h"
 #include "sprintron_keyfob_app.h"
 
