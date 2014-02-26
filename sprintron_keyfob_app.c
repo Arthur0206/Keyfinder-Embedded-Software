@@ -176,6 +176,7 @@ static uint8 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
 static uint16 keyfobConnectionParameters[3] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
                                                 SUPERVISION_TIMEOUT_DEFAULT_VALUE,
                                                  SLAVE_LATENCY_DEFAULT_VALUE };
+uint8 ownAddress[B_ADDR_LEN];
 
 #ifdef USE_WHITE_LIST_ADV
 uint8 connectedDeviceBDAddr[B_ADDR_LEN];
@@ -404,7 +405,9 @@ void KeyFobApp_Init( uint8 task_id )
 
     GAPRole_SetParameter( GAPROLE_SCAN_RSP_DATA, sizeof ( deviceName ), deviceName );
 
+    HCI_ReadBDADDRCmd();
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+
   
     GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE, sizeof( uint8 ), &enable_update_request );
     GAPRole_SetParameter( GAPROLE_MIN_CONN_INTERVAL, sizeof( uint16 ), &desired_min_interval );
@@ -511,8 +514,6 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
   if ( events & KFD_START_DEVICE_EVT )
   {
-    uint8 ownAddress[B_ADDR_LEN];
-
     // Start the Device
     VOID GAPRole_StartDevice( &keyFob_PeripheralCBs );
 
@@ -521,9 +522,6 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
     // Start the Proximity Profile
     VOID sprintronKeyfob_RegisterAppCBs( &keyFob_ProfileCBs );
-
-    // put BD addr into ADV data
-    GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddress);
 
     advertData[5] = ownAddress[0];
     advertData[6] = ownAddress[1];
