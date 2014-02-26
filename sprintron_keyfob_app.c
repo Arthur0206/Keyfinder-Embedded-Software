@@ -850,8 +850,14 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
     //if the state changed to advertising, initially assume that keyfob is in range
     case GAPROLE_ADVERTISING:
       {
-        // Visual feedback that we are advertising.
-        HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+        uint8 adv_filter_policy;
+      	GAPRole_GetParameter(GAPROLE_ADV_FILTER_POLICY, &adv_filter_policy);
+
+        if ( adv_filter_policy == GAP_FILTER_POLICY_ALL)
+        {
+          // Visual feedback that we are advertising to all devices (not using whitelist).
+          HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+        }
       }
       break;
       
