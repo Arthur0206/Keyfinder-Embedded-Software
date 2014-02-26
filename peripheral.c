@@ -99,7 +99,7 @@
 /*********************************************************************
  * EXTERNAL VARIABLES
  */
-
+extern uint8 ownAddress[];
 /*********************************************************************
  * EXTERNAL FUNCTIONS
  */
@@ -850,6 +850,18 @@ static void gapRole_ProcessOSALMsg( osal_event_hdr_t *pMsg )
             if ( pGapRoles_AppCGs && pGapRoles_AppCGs->pfnRssiRead )
             {
               pGapRoles_AppCGs->pfnRssiRead( rssi );
+            }
+          }
+        }
+        
+        if ( pPkt->cmdOpcode == HCI_READ_BDADDR )
+        {
+          {
+            hciEvt_CmdComplete_t *pPkt = (hciEvt_CmdComplete_t *)pMsg;
+
+            if ( pPkt->cmdOpcode == HCI_READ_BDADDR )
+            {
+              osal_memcpy( &ownAddress, &pPkt->pReturnParam[1], 6 );
             }
           }
         }
