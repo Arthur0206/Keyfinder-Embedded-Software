@@ -638,6 +638,9 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       // set adv filter policy to only accept devices in whitelist
       GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
     }
+
+    // Turn off LED that shows we're advertising
+    HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
   }
 #endif
 
@@ -864,12 +867,17 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
     //if the state changed to connected, initially assume that keyfob is in range      
     case GAPROLE_CONNECTED:
       {
+        uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+
         GAPRole_GetParameter( GAPROLE_CONNHANDLE, &connHandle );
 
 #ifdef USE_WHITE_LIST_ADV
         GAPRole_GetParameter( GAPROLE_CONN_BD_ADDR, connectedDeviceBDAddr );
 
 		VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
+
+        // set adv filter policy to only accept devices in whitelist
+        GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
 #endif
 
         #if defined ( PLUS_BROADCASTER )
