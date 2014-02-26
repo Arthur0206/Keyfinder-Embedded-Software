@@ -625,37 +625,44 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     // turn on adv
     GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
 
-    // set a 30s timer for stopping the non-whitelist adv state.
-    osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, 30000 );
+    // set a 15s timer for stopping the non-whitelist adv state.
+    osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, 15000 );
   }
 
   if (events & KFD_NON_WHITELIST_STOP_EVT)
   {
-    uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
-    uint8 turnOnAdv;
-
     // if not in connection, then adv should be on at the time
     if ( gapProfileState != GAPROLE_CONNECTED ) 
     {
       // turn off adv first
-      turnOnAdv = FALSE;
+      uint8 turnOnAdv = FALSE;
       GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
-  
-      // set adv filter policy to only accept devices in whitelist
-      GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
-  
-      // turn on adv
-      turnOnAdv = TRUE;
-      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
+
+      // turn on adv with a delay. if no delay it won't work for some reasons
+      osal_start_timerEx( keyfobapp_TaskID, KFD_WHITELIST_START_EVT, 500 );
     }
     else // if in connection, then adv should be off at the time
     {
+      uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+
       // set adv filter policy to only accept devices in whitelist
       GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
     }
 
     // Turn off LED2 and remains LED1 on, to show that we're advertising with whitelist. 
     HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+  }
+
+  if (events & KFD_WHITELIST_START_EVT)
+  {
+    uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+    uint8 turnOnAdv = TRUE;
+    
+    // set adv filter policy to only accept devices in whitelist
+    GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
+
+    // turn on adv
+    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
   }
 #endif
 
@@ -715,7 +722,8 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
       // turn off adv first
       GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
 
-      osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_START_EVT, 1000 );
+      // turn on adv with a delay. if no delay it won't work for some reasons
+      osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_START_EVT, 500 );
     }
 #else //USE_WHITE_LIST_ADV
     // if device is not in a connection, pressing the right key should toggle

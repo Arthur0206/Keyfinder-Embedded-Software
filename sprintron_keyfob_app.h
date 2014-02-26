@@ -63,6 +63,7 @@ extern "C"
 #define KFD_POWERON_LED_TIMEOUT_EVT                       0x0020
 #define KFD_NON_WHITELIST_STOP_EVT                        0x0040
 #define KFD_NON_WHITELIST_START_EVT                       0x0080
+#define KFD_WHITELIST_START_EVT                           0x0100
 
 
 /*********************************************************************
