@@ -305,7 +305,7 @@ static sprintronKeyfobCBs_t keyFob_ProfileCBs =
     advertData[8] = bd_addr[3];
     advertData[9] = bd_addr[4];
     advertData[10] = bd_addr[5];
-          HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
  }
  
