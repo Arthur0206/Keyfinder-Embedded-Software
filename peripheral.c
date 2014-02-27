@@ -861,7 +861,14 @@ static void gapRole_ProcessOSALMsg( osal_event_hdr_t *pMsg )
 
             if ( pPkt->cmdOpcode == HCI_READ_BDADDR )
             {
+              uint8 ownAddress[B_ADDR_LEN];
               osal_memcpy( &ownAddress, &pPkt->pReturnParam[1], 6 );
+              
+              // Report RSSI to app
+              if ( pGapRoles_AppCGs && pGapRoles_AppCGs->pfnBDAddrRead )
+              {
+                pGapRoles_AppCGs->pfnBDAddrRead(ownAddress);
+              }
             }
           }
         }
