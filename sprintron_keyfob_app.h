@@ -55,6 +55,8 @@ extern "C"
 
 #define USE_WHITE_LIST_ADV                                1
 
+#define MAX_WHITELIST_LEN                                 8
+
 // Key Fob Task Events
 #define KFD_START_DEVICE_EVT                              0x0001
 #define KFD_BATTERY_CHECK_EVT                             0x0002
@@ -65,6 +67,9 @@ extern "C"
 #define KFD_NON_WHITELIST_START_EVT                       0x0080
 #define KFD_WHITELIST_START_EVT                           0x0100
 
+// Key Fob NV Item ID
+// According to osal api document, application can use item id range from 0x80~0xfe, we choose something in between.
+#define SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID      0xC0
 
 /*********************************************************************
  * MACROS

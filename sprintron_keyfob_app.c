@@ -178,7 +178,8 @@ static uint16 keyfobConnectionParameters[3] = { CONNECTION_INTERVAL_DEFAULT_VALU
                                                  SLAVE_LATENCY_DEFAULT_VALUE };
 
 #ifdef USE_WHITE_LIST_ADV
-uint8 connectedDeviceBDAddr[B_ADDR_LEN];
+// set initialized value to a random addr, so we can recognize when it is connected at the first time after system boot up.
+uint8 connectedDeviceBDAddr[B_ADDR_LEN] = {0x13,0x24,0x35,0x46,0x57,0x68};
 #endif
 
 // GAP - SCAN RSP data (max size = 31 bytes)
@@ -241,7 +242,7 @@ static uint8 advertData[] =
 
 // GAP GATT Attributes
 static uint8 attDeviceName[GAP_DEVICE_NAME_LEN] = "Sprintron Keyfob";
-  
+
 // Buzzer state
 static uint8 buzzer_state = BUZZER_OFF;
 static uint8 buzzer_beep_count = 0;
@@ -388,9 +389,23 @@ void KeyFobApp_Init( uint8 task_id )
     uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
 
 #ifdef USE_WHITE_LIST_ADV 
+    uint8 snvStatus;
 	uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
 	
 	GAPRole_SetParameter(GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy);
+
+    // read previously connected device's BD Addr from NV
+    snvStatus = osal_snv_read( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
+                             sizeof( B_ADDR_LEN ),
+                             (uint8 *)connectedDeviceBDAddr );
+
+    // if read success, add it into white list. 
+    // if fail, means device is never connected to a device. don't add white list. (connectedDeviceBDAddr remains as initialized value)
+    if (snvStatus == SUCCESS)
+    {
+	  // add previously connected device into whitelist.
+	  VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
+    }
 #endif
 
     // Set the GAP Role Parameters
@@ -882,14 +897,36 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
     //if the state changed to connected, initially assume that keyfob is in range      
     case GAPROLE_CONNECTED:
       {
+#ifdef USE_WHITE_LIST_ADV
+		uint8 default_connectedDeviceBDAddr[B_ADDR_LEN] = {0x13,0x24,0x35,0x46,0x57,0x68};
+        uint8 newly_connectedDeviceBDAddr[B_ADDR_LEN];
+#endif
         uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
 
         GAPRole_GetParameter( GAPROLE_CONNHANDLE, &connHandle );
 
 #ifdef USE_WHITE_LIST_ADV
-        GAPRole_GetParameter( GAPROLE_CONN_BD_ADDR, connectedDeviceBDAddr );
+        GAPRole_GetParameter( GAPROLE_CONN_BD_ADDR, newly_connectedDeviceBDAddr );
 
-		VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
+        // save newly connected device's BD Addr into NV ram and white list, if any of the following is true:
+        // 1. the keyfob is connected at the 1st time (ie. connectedDeviceBDAddr == {0x13,0x24,0x35,0x46,0x57,0x68})
+        // 2. newly connected device's BD addr is different from previously connected device's BD addr.
+        // Corner case: if the previously connected device really has BD Addr {0x13,0x24,0x35,0x46,0x57,0x68}, we might store the same value into 
+        // NV ram everytime when device is reconnected, which will consume more power.
+        if ( osal_memcmp( (void*)default_connectedDeviceBDAddr, (void*)connectedDeviceBDAddr, B_ADDR_LEN) ||
+             !osal_memcmp( (void*)newly_connectedDeviceBDAddr, (void*)connectedDeviceBDAddr, B_ADDR_LEN) )
+        {
+          // store newly connected device into NV ram.
+          osal_snv_write( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
+											 sizeof( B_ADDR_LEN ),
+											 (uint8 *)newly_connectedDeviceBDAddr );
+
+          // update previously connected device's BD Addr.
+          connectedDeviceBDAddr = newly_connectedDeviceBDAddr;
+
+          // add newly connected device into white list.
+          VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
+        }
 
         // set adv filter policy to only accept devices in whitelist
         GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
