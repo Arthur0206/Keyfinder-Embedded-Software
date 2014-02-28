@@ -634,7 +634,7 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
         
       case SPRINTRON_CONNECTION_PARAMETERS_UUID:
         *pLen = sizeof(sprintronConnectionParameters);
-        osal_memcpy(pValue, sprintronConnectionParameters, *pLen);
+        osal_memcpy(pValue, pAttr->pValue, *pLen);
         break;
         
       default:
@@ -725,7 +725,8 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         else
         {  
           uint8 *pCurValue = (uint8 *)pAttr->pValue;
-          osal_memcpy(pCurValue, sprintronConnectionParameters, len);
+          osal_memcpy(pCurValue, pValue, len);
+          notify = SPRINTRON_CONNECTION_PARAMETERS;
         }
         break;
         
