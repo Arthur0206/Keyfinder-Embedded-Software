@@ -256,7 +256,8 @@ static void keyfobapp_StopAlert( void );
 static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
-static void updateProximityAlert( int8 newRSSI );
+static void updateRssiProximityAlert( int8 newRSSI );
+static void putBDAddrIntoAdvData( uint8 *bd_addr );
 static uint8 isProximityAlertToggleNeeded();
 
 /*********************************************************************
@@ -267,7 +268,8 @@ static uint8 isProximityAlertToggleNeeded();
 static gapRolesCBs_t keyFob_PeripheralCBs =
 {
   peripheralStateNotificationCB,  // Profile State Change Callbacks
-  updateProximityAlert   // When a valid RSSI is read from controller
+  updateRssiProximityAlert,   // When a valid RSSI is read from controller
+  putBDAddrIntoAdvData
 };
 
 // GAP Bond Manager Callbacks
@@ -287,6 +289,27 @@ static sprintronKeyfobCBs_t keyFob_ProfileCBs =
  * PUBLIC FUNCTIONS
  */
 
+ /*********************************************************************
+ * @fn      putBDAddrIntoAdvData
+ *
+ * @brief   Added by Sprintron
+ *
+ * @param  none
+ *
+ * @return  Out_Of_Range_Status
+ */
+ static void putBDAddrIntoAdvData( uint8 *bd_addr )
+ {
+    advertData[5] = bd_addr[0];
+    advertData[6] = bd_addr[1];
+    advertData[7] = bd_addr[2];
+    advertData[8] = bd_addr[3];
+    advertData[9] = bd_addr[4];
+    advertData[10] = bd_addr[5];
+
+    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+ }
+ 
 /*********************************************************************
  * @fn      isProximityAlertToggleNeeded
  *
@@ -320,7 +343,7 @@ static bool isProximityAlertToggleNeeded()
 }
 
 /*********************************************************************
- * @fn      updateProximityAlertStatus
+ * @fn      updateRssiProximityAlert
  *
  * @brief   Added by Sprintron
  *              This function will be called when RSSI value is available every 1s. 
@@ -330,7 +353,7 @@ static bool isProximityAlertToggleNeeded()
  * @return  none
  */
 
-static void updateProximityAlert( int8 newRSSI )
+static void updateRssiProximityAlert( int8 newRSSI )
 {
   keyfobRssiValue = newRSSI;
   sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
@@ -420,6 +443,7 @@ void KeyFobApp_Init( uint8 task_id )
     GAPRole_SetParameter( GAPROLE_SCAN_RSP_DATA, sizeof ( deviceName ), deviceName );
 
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+
   
     GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE, sizeof( uint8 ), &enable_update_request );
     GAPRole_SetParameter( GAPROLE_MIN_CONN_INTERVAL, sizeof( uint16 ), &desired_min_interval );
@@ -526,8 +550,6 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
   if ( events & KFD_START_DEVICE_EVT )
   {
-    uint8 ownAddress[B_ADDR_LEN];
-
     // Start the Device
     VOID GAPRole_StartDevice( &keyFob_PeripheralCBs );
 
@@ -537,21 +559,11 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     // Start the Proximity Profile
     VOID sprintronKeyfob_RegisterAppCBs( &keyFob_ProfileCBs );
 
-    // put BD addr into ADV data
-    GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddress);
-
-    advertData[5] = ownAddress[0];
-    advertData[6] = ownAddress[1];
-    advertData[7] = ownAddress[2];
-    advertData[8] = ownAddress[3];
-    advertData[9] = ownAddress[4];
-    advertData[10] = ownAddress[5];
-
-    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
-
     // Set timer for first battery read event
     osal_start_timerEx( keyfobapp_TaskID, KFD_BATTERY_CHECK_EVT, BATTERY_CHECK_PERIOD );
 
+    // Request to read BD_ADDR. This need to be done after callback is setup.
+    HCI_ReadBDADDRCmd();
     //Set the proximity attribute values to default
     sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_CONFIG,  sizeof ( int8 ), &keyfobProximityConfig );
@@ -925,6 +937,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           connectedDeviceBDAddr = newly_connectedDeviceBDAddr;
 
           // add newly connected device into white list.
+          VOID HCI_LE_ClearWhiteListCmd();
           VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
         }
 
