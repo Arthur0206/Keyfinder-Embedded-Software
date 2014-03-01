@@ -79,6 +79,8 @@
 #include "sprintron_keyfob_profile.h"
 #include "sprintron_keyfob_app.h"
 
+#include "osal_snv.h"
+
 /*********************************************************************
  * MACROS
  */
@@ -419,7 +421,7 @@ void KeyFobApp_Init( uint8 task_id )
 
     // read previously connected device's BD Addr from NV
     snvStatus = osal_snv_read( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
-                             sizeof( B_ADDR_LEN ),
+                             B_ADDR_LEN,
                              (uint8 *)connectedDeviceBDAddr );
 
     // if read success, add it into white list. 
@@ -928,17 +930,17 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         if ( osal_memcmp( (void*)default_connectedDeviceBDAddr, (void*)connectedDeviceBDAddr, B_ADDR_LEN) ||
              !osal_memcmp( (void*)newly_connectedDeviceBDAddr, (void*)connectedDeviceBDAddr, B_ADDR_LEN) )
         {
-          // store newly connected device into NV ram.
-          osal_snv_write( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
-											 sizeof( B_ADDR_LEN ),
-											 (uint8 *)newly_connectedDeviceBDAddr );
-
-          // update previously connected device's BD Addr.
-          connectedDeviceBDAddr = newly_connectedDeviceBDAddr;
-
-          // add newly connected device into white list.
-          VOID HCI_LE_ClearWhiteListCmd();
-          VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
+		  // update previously connected device's BD Addr.
+		  osal_memcpy( (void*)connectedDeviceBDAddr, (void*)newly_connectedDeviceBDAddr, B_ADDR_LEN );
+			
+		  // store newly connected device into NV ram.
+		  VOID osal_snv_write( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
+							   B_ADDR_LEN,
+							   (uint8 *)connectedDeviceBDAddr );   
+			
+		  // add newly connected device into white list.
+		  VOID HCI_LE_ClearWhiteListCmd();
+		  VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
         }
 
         // set adv filter policy to only accept devices in whitelist
