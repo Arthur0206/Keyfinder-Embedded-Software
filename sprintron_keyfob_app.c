@@ -93,7 +93,7 @@
 #define STARTDELAY                            500
 
 // Number of beeps before buzzer stops by itself
-#define BUZZER_MAX_BEEPS                      10
+#define BUZZER_MAX_BEEPS                      200
 
 // Buzzer beep tone frequency for "High Alert" (in Hz)
 #define BUZZER_ALERT_HIGH_FREQ                4096
@@ -124,8 +124,8 @@
 // Supervision timeout value (units of 10ms, 1000=10s) if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_CONN_TIMEOUT          1000
 
-// request RSSI value periodically. Default value is 1 s.
-#define DEFAULT_DESIRED_RSSI_READ_RATE        1000
+// request RSSI value periodically. Default value is 0 means no periodic event for reading RSSI.
+#define DEFAULT_DESIRED_RSSI_READ_RATE        0
 
 // Whether to enable automatic parameter update request when a connection is formed
 #define DEFAULT_ENABLE_UPDATE_REQUEST         TRUE
@@ -300,17 +300,16 @@ static sprintronKeyfobCBs_t keyFob_ProfileCBs =
  *
  * @return  Out_Of_Range_Status
  */
- static void putBDAddrIntoAdvData( uint8 *bd_addr )
- {
-    advertData[5] = bd_addr[0];
-    advertData[6] = bd_addr[1];
-    advertData[7] = bd_addr[2];
-    advertData[8] = bd_addr[3];
-    advertData[9] = bd_addr[4];
-    advertData[10] = bd_addr[5];
-
-    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
- }
+static void putBDAddrIntoAdvData( uint8 *bd_addr )
+{
+  advertData[5] = bd_addr[0];
+  advertData[6] = bd_addr[1];
+  advertData[7] = bd_addr[2];
+  advertData[8] = bd_addr[3];
+  advertData[9] = bd_addr[4];
+  advertData[10] = bd_addr[5];
+  GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+}
  
 /*********************************************************************
  * @fn      isProximityAlertToggleNeeded
@@ -624,6 +623,17 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       {
         osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 800 );
       }
+
+      // if reach maximum number of times, reset counter, and set SPRINTRON_AUDIO_VISUAL_ALERT attribute to OFF.
+      if ( buzzer_beep_count >= BUZZER_MAX_BEEPS )
+      {
+        // set visual alert level to off.
+        keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
+        sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
+
+        // reset beep counter.
+        buzzer_beep_count = 0;
+      }
     }
     else if ( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF )
     {
@@ -696,6 +706,19 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
   }
 #endif
+
+  // this event will be triggered every connection interval
+  if (events & KFD_CONNECTION_INTERVAL_EVT)
+  {
+	// call HCI command to read RSSI on every connection interval
+	uint16 conn_handle;
+
+	// get connection handle
+	GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+
+	// call hci command to read rssi value
+	VOID HCI_ReadRssiCmd( conn_handle );
+  }
 
   // Discard unknown events
   return 0;
@@ -953,6 +976,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 
         // Turn off the LED that shows we're advertising without whitelist.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+
+        // setup connection interval event callback
+        HCI_EXT_ConnEventNoticeCmd( keyfobapp_TaskID, KFD_CONNECTION_INTERVAL_EVT );
       }
       break;
 
