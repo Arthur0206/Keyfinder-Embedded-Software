@@ -174,7 +174,7 @@ static int8 keyfobRssiValue = RSSI_VALUE_DEFAULT_VALUE;
 static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE; 
 static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;    
 static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;  
-static uint8 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF; 
+static uint32 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_ALL_OFF; 
 static uint16 keyfobDeviceConfigParameters[5] = { 
 	                                              // connection parameters
 	                                              CONNECTION_INTERVAL_DEFAULT_VALUE,
@@ -601,7 +601,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_CONFIG,  sizeof ( int8 ), &keyfobProximityConfig );
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
     sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
-    sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
+    sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
     sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS,  sizeof ( keyfobDeviceConfigParameters ), keyfobDeviceConfigParameters );
 
     // Set LED1 on to give feedback that the power is on, and a timer to turn off
@@ -650,7 +650,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       // check to see if buzzer has beeped maximum number of times
       // if it has, then don't turn it back on
       if ( ( buzzer_beep_count < keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] ) &&
-           ( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF ) )
+           ( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF) )
       {
         osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 800 );
       }
@@ -659,14 +659,14 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       if ( buzzer_beep_count >= keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] )
       {
         // set visual alert level to off.
-        keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
-        sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
+        ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
+        sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
 
         // reset beep counter.
         buzzer_beep_count = 0;
       }
     }
-    else if ( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF )
+    else if ( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
     {
       // if this event was triggered while the buzzer is off then turn it on if appropriate
       keyfobapp_PerformAlert();
@@ -850,9 +850,9 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
  */
 static void keyfobapp_PerformAlert( void )
 {
-    switch( keyfobAudioVisualAlert )
+    switch( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] )
     {
-    case AUDIO_VISUAL_ALERT_LOW:
+    case BUZZER_ALERT_LOW:
 
   #if defined ( POWER_SAVING )
         osal_pwrmgr_device( PWRMGR_ALWAYS_ON );
@@ -866,7 +866,7 @@ static void keyfobapp_PerformAlert( void )
       HalLedSet( (HAL_LED_1 | HAL_LED_2), HAL_LED_MODE_OFF );
       break;
 
-    case AUDIO_VISUAL_ALERT_HIGH:
+    case BUZZER_ALERT_HIGH:
 
   #if defined ( POWER_SAVING )
         osal_pwrmgr_device( PWRMGR_ALWAYS_ON );
@@ -881,7 +881,7 @@ static void keyfobapp_PerformAlert( void )
       HalLedSet( HAL_LED_2, HAL_LED_MODE_FLASH );
       break;
 
-    case AUDIO_VISUAL_ALERT_OFF:
+    case BUZZER_ALERT_OFF:
         // Fall through
     default:
       keyfobapp_StopAlert();
@@ -1022,10 +1022,10 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         // or advertising timed out
 
         // if beep status is on, turn it off, and stop alert.
-        if( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF)
+        if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
         {
-          keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
-          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
+          ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
           keyfobapp_StopAlert();
         }
 
@@ -1039,10 +1039,10 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         // the link was dropped due to supervision timeout
 
         // if beep status is on, turn it off, and stop alert.
-        if( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF )
+        if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
         {
-          keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
-          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
+          ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
           keyfobapp_StopAlert();
         }
       }
@@ -1096,7 +1096,7 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
     {
 	  sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
 
-      if( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF)
+      if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
       {
         keyfobapp_PerformAlert();
         buzzer_beep_count = 0;
@@ -1104,6 +1104,17 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
       else
       {
         keyfobapp_StopAlert();
+      }
+
+      if( ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_OFF)
+      {
+        // Turn off the LED that shows that we're advertising without whitelist.
+        HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+      }
+      else
+      {
+        // Turn off the LED that shows that we're advertising without whitelist.
+        HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
       }
     }
     break;
