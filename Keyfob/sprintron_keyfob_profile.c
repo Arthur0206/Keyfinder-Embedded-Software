@@ -123,16 +123,16 @@ CONST uint8 sprintronAudioVisualAlertUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID ), HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID )
 };
 
-// Sprintron Connection Update Service UUID
-CONST uint8 sprintronConnectionUpdateServiceUUID[ATT_BT_UUID_SIZE] =
+// Sprintron Device Config Service UUID
+CONST uint8 sprintronDeviceConfigServiceUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID ), HI_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID )
+  LO_UINT16( SPRINTRON_DEVICE_CONFIG_SERVICE_UUID ), HI_UINT16( SPRINTRON_DEVICE_CONFIG_SERVICE_UUID )
 };
 
-// Sprintron Connection Parameters UUID
-CONST uint8 sprintronConnectionParametersUUID[ATT_BT_UUID_SIZE] =
+// Sprintron Device Config Parameters UUID
+CONST uint8 sprintronDeviceConfigParametersUUID[ATT_BT_UUID_SIZE] =
 { 
-  LO_UINT16( SPRINTRON_CONNECTION_PARAMETERS_UUID ), HI_UINT16( SPRINTRON_CONNECTION_PARAMETERS_UUID )
+  LO_UINT16( SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID ), HI_UINT16( SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID )
 };
 
 /*********************************************************************
@@ -156,7 +156,7 @@ static CONST gattAttrType_t sprintronRssiReportService = { ATT_BT_UUID_SIZE, spr
 static CONST gattAttrType_t sprintronProximityAlertService = { ATT_BT_UUID_SIZE, sprintronProximityAlertServiceUUID };
 static CONST gattAttrType_t sprintronClientTxPowerService = { ATT_BT_UUID_SIZE, sprintronClientTxPowerServiceUUID };
 static CONST gattAttrType_t sprintronAudioVisualAlertService = { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertServiceUUID };
-static CONST gattAttrType_t sprintronConnectionUpdateService = { ATT_BT_UUID_SIZE, sprintronConnectionUpdateServiceUUID };
+static CONST gattAttrType_t sprintronDeviceConfigService = { ATT_BT_UUID_SIZE, sprintronDeviceConfigServiceUUID };
 
 static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
 static int8 sprintronRssiValue = RSSI_VALUE_DEFAULT_VALUE;
@@ -174,10 +174,12 @@ static int8 sprintronClientTxPower = CLIENT_TX_POWER_DEFAULT_VALUE;
 static uint8 sprintronAudioVisualAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint8 sprintronAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
 
-static uint8 sprintronConnectionParametersCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
-static uint16 sprintronConnectionParameters[3] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
+static uint8 sprintronDeviceConfigParametersCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
+static uint16 sprintronDeviceConfigParameters[5] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
                                                    SUPERVISION_TIMEOUT_DEFAULT_VALUE,
-                                                   SLAVE_LATENCY_DEFAULT_VALUE };
+                                                   SLAVE_LATENCY_DEFAULT_VALUE,
+                                                   NORMAL_ADV_INTERVAL_DEFAULT_VALUE,
+                                                   AUDIO_VISUAL_ALERT_TIME };
 
 /*********************************************************************
  * Profile Attributes - Table
@@ -311,28 +313,28 @@ static gattAttribute_t sprintronAudioVisualAlertAttrTbl[] =
       },
 };
 
-static gattAttribute_t sprintronConnectionUpdateAttrTbl[] = 
+static gattAttribute_t sprintronDeviceConfigAttrTbl[] = 
 {
-  // Sprintron Connection Update Service
+  // Sprintron Device Config Service
   {
     { ATT_BT_UUID_SIZE, primaryServiceUUID },
     GATT_PERMIT_READ,
     0,
-    (uint8 *)&sprintronConnectionUpdateService
+    (uint8 *)&sprintronDeviceConfigService
   },
     // Characteristic Declaration
     {
       {ATT_BT_UUID_SIZE, characterUUID},
       GATT_PERMIT_READ,
       0,
-      (uint8 *)&sprintronConnectionParametersCharProps
+      (uint8 *)&sprintronDeviceConfigParametersCharProps
     },
-      // Connection Parameters
+      // Device Config Parameters
       { 
-        { ATT_BT_UUID_SIZE, sprintronConnectionParametersUUID},
+        { ATT_BT_UUID_SIZE, sprintronDeviceConfigParametersUUID},
         GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
         0, 
-        (uint8 *)sprintronConnectionParameters
+        (uint8 *)sprintronDeviceConfigParameters
       },
 };
 
@@ -404,10 +406,10 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
                                           &sprintronKeyfobCBs);
   }
 
-  if ( ( status == SUCCESS ) && ( services & SPRINTRON_CONNECTION_UPDATE_SERVICE ) )
+  if ( ( status == SUCCESS ) && ( services & SPRINTRON_DEVICE_CONFIG_SERVICE ) )
   {
-    status = GATTServApp_RegisterService( sprintronConnectionUpdateAttrTbl,
-                                          GATT_NUM_ATTRS( sprintronConnectionUpdateAttrTbl ),
+    status = GATTServApp_RegisterService( sprintronDeviceConfigAttrTbl,
+                                          GATT_NUM_ATTRS( sprintronDeviceConfigAttrTbl ),
                                           &sprintronKeyfobCBs);
   }
 
@@ -524,10 +526,29 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       }
       break;
 
-	case SPRINTRON_CONNECTION_PARAMETERS:
-      if ( len == sizeof ( sprintronConnectionParameters ) )
-      {
-        osal_memcpy(sprintronConnectionParameters, value, len);
+	case SPRINTRON_DEVICE_CONFIG_PARAMETERS:
+      if ( len == sizeof ( sprintronDeviceConfigParameters ) )
+      {  
+        // if connection parameters are changed, send connection update hci command to iPhone. 3 uint16 are equal to 6 bytes.
+        if ( !osal_memcmp( (void*)value, (void*)sprintronDeviceConfigParameters, 6) )
+        {
+          GAPRole_SendUpdateParam( ((uint16*)value)[CONFIG_IDX_CONNECTION_INTERVAL], 
+								    ((uint16*)value)[CONFIG_IDX_CONNECTION_INTERVAL],
+								    ((uint16*)value)[CONFIG_IDX_SLAVE_LATENCY], 
+								    ((uint16*)value)[CONFIG_IDX_SUPERVISION_TIMEOUT],
+								    GAPROLE_NO_ACTION );
+        }
+		  
+        // if normal adv interval is changed, call GAP api to update normal adv interval.
+        if ( !osal_memcmp( (void*)(value + CONFIG_IDX_NORMAL_ADV_INTERVAL), 
+							  (void*)(sprintronDeviceConfigParameters + CONFIG_IDX_NORMAL_ADV_INTERVAL), 2) )
+        {
+          GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, ((uint16*)value)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+          GAP_SetParamValue( TGAP_CONN_ADV_INT_MAX, ((uint16*)value)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+        }
+
+        // do not really update connection parameters until the current connection parameters is really changed.
+        osal_memcpy( (void*)(sprintronDeviceConfigParameters + 3), value, 4);
       }
       else
       {
@@ -581,8 +602,8 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
       *((uint8*)value) = sprintronAudioVisualAlert;
       break;
 
-    case SPRINTRON_CONNECTION_PARAMETERS:
-      osal_memcpy(value, sprintronConnectionParameters, sizeof(sprintronConnectionParameters));
+    case SPRINTRON_DEVICE_CONFIG_PARAMETERS:
+      osal_memcpy(value, sprintronDeviceConfigParameters, sizeof(sprintronDeviceConfigParameters));
       break;
 
     default:
@@ -632,8 +653,8 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
         pValue[0] = *pAttr->pValue;
         break;
         
-      case SPRINTRON_CONNECTION_PARAMETERS_UUID:
-        *pLen = sizeof(sprintronConnectionParameters);
+      case SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID:
+        *pLen = sizeof(sprintronDeviceConfigParameters);
         osal_memcpy(pValue, pAttr->pValue, *pLen);
         break;
         
@@ -717,8 +738,8 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         }
         break;
 
-      case SPRINTRON_CONNECTION_PARAMETERS_UUID:
-        if ( len > sizeof(sprintronConnectionParameters) )
+      case SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID:
+        if ( len > sizeof(sprintronDeviceConfigParameters) )
         {
           status = ATT_ERR_INVALID_VALUE_SIZE;
         }
@@ -726,7 +747,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         {  
           uint8 *pCurValue = (uint8 *)pAttr->pValue;
           osal_memcpy(pCurValue, pValue, len);
-          notify = SPRINTRON_CONNECTION_PARAMETERS;
+          notify = SPRINTRON_DEVICE_CONFIG_PARAMETERS;
         }
         break;
         

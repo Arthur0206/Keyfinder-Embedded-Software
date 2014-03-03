@@ -175,9 +175,16 @@ static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE;
 static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;    
 static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;  
 static uint8 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF; 
-static uint16 keyfobConnectionParameters[3] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
-                                                SUPERVISION_TIMEOUT_DEFAULT_VALUE,
-                                                 SLAVE_LATENCY_DEFAULT_VALUE };
+static uint16 keyfobDeviceConfigParameters[5] = { 
+	                                              // connection parameters
+	                                              CONNECTION_INTERVAL_DEFAULT_VALUE,
+	                                              SUPERVISION_TIMEOUT_DEFAULT_VALUE,
+	                                              SLAVE_LATENCY_DEFAULT_VALUE,
+	                                              // normal adv interval
+	                                              NORMAL_ADV_INTERVAL_DEFAULT_VALUE,
+	                                              // av alert lasting time
+	                                              AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE };
+
 
 #ifdef USE_WHITE_LIST_ADV
 // set initialized value to a random addr, so we can recognize when it is connected at the first time after system boot up.
@@ -238,8 +245,8 @@ static uint8 advertData[] =
   HI_UINT16( SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID ),
   LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID ),
   HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID ),
-  LO_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID ),
-  HI_UINT16( SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID )
+  LO_UINT16( SPRINTRON_DEVICE_CONFIG_SERVICE_UUID ),
+  HI_UINT16( SPRINTRON_DEVICE_CONFIG_SERVICE_UUID )
 };
 
 // GAP GATT Attributes
@@ -259,8 +266,9 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
 static void updateRssiProximityAlert( int8 newRSSI );
+static void updateConnParametersDeviceConfig( void );
 static void putBDAddrIntoAdvData( uint8 *bd_addr );
-static uint8 isProximityAlertToggleNeeded();
+static uint8 isProximityAlertToggleNeeded( void );
 
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -367,6 +375,29 @@ static void updateRssiProximityAlert( int8 newRSSI )
 
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( int8 ), &keyfobProximityAlert );
   }
+}
+
+/*********************************************************************
+ * @fn      updateConnParametersDeviceConfig
+ *
+ * @brief   Added by Sprintron
+ *              This function will be called when:
+ *              1. device is connected
+ *              2. GAP send 
+ *              to write current connection parameters into corresponding attributes.
+ * @param   rssi value
+ *
+ * @return  none
+ */
+static void updateConnParametersDeviceConfig( )
+{
+    // update the 3 connection parameters into local copy keyfobDeviceConfigParameters
+	GAPRole_GetParameter( GAPROLE_CONN_INTERVAL, keyfobDeviceConfigParameters + CONFIG_IDX_CONNECTION_INTERVAL );
+	GAPRole_GetParameter( GAPROLE_CONN_LATENCY, keyfobDeviceConfigParameters + CONFIG_IDX_SUPERVISION_TIMEOUT );
+	GAPRole_GetParameter( GAPROLE_CONN_TIMEOUT, keyfobDeviceConfigParameters + CONFIG_IDX_SLAVE_LATENCY );
+
+    // update the 3 connection parameter into corresponding attributes
+    sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
 }
 
 /*********************************************************************
@@ -571,7 +602,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
     sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
     sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( uint8 ), &keyfobAudioVisualAlert );
-    sprintronKeyfob_SetParameter( SPRINTRON_CONNECTION_PARAMETERS,  sizeof ( keyfobConnectionParameters ), keyfobConnectionParameters );
+    sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS,  sizeof ( keyfobDeviceConfigParameters ), keyfobDeviceConfigParameters );
 
     // Set LED1 on to give feedback that the power is on, and a timer to turn off
     HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
@@ -618,14 +649,14 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
       // check to see if buzzer has beeped maximum number of times
       // if it has, then don't turn it back on
-      if ( ( buzzer_beep_count < BUZZER_MAX_BEEPS ) &&
+      if ( ( buzzer_beep_count < keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] ) &&
            ( keyfobAudioVisualAlert != AUDIO_VISUAL_ALERT_OFF ) )
       {
         osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 800 );
       }
 
       // if reach maximum number of times, reset counter, and set SPRINTRON_AUDIO_VISUAL_ALERT attribute to OFF.
-      if ( buzzer_beep_count >= BUZZER_MAX_BEEPS )
+      if ( buzzer_beep_count >= keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] )
       {
         // set visual alert level to off.
         keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
@@ -974,6 +1005,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           osal_start_timerEx( keyfobapp_TaskID, KFD_ADV_IN_CONNECTION_EVT, ADV_IN_CONN_WAIT );
         #endif
 
+		// udpate connection parameters for corresponding attributes.
+		updateConnParametersDeviceConfig();
+
         // Turn off the LED that shows we're advertising without whitelist.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
 
@@ -1014,6 +1048,12 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       }
       break;
 
+	// udpate connection parameters for corresponding attributes.
+    case GAPROLE_CONN_PARAM_UPDATED:
+      {
+        updateConnParametersDeviceConfig();
+      }
+    
     default:
       // do nothing
       break;
@@ -1068,13 +1108,10 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
     }
     break;
 
-  case SPRINTRON_CONNECTION_PARAMETERS:
-    {
-      sprintronKeyfob_GetParameter( SPRINTRON_CONNECTION_PARAMETERS, keyfobConnectionParameters );
-
-      GAPRole_SendUpdateParam( keyfobConnectionParameters[0], keyfobConnectionParameters[0],
-                               keyfobConnectionParameters[2], keyfobConnectionParameters[1],
-                               GAPROLE_NO_ACTION );
+  case SPRINTRON_DEVICE_CONFIG_PARAMETERS:
+    { 
+      // the code to send connection update and change normal adv interval is in sprintron_keyfob_profile.c
+      sprintronKeyfob_GetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, keyfobDeviceConfigParameters );
     }
     break;
     

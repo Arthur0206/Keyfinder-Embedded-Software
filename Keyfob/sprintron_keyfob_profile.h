@@ -59,7 +59,7 @@ extern "C"
 #define SPRINTRON_PROXIMITY_ALERT                       2
 #define SPRINTRON_CLIENT_TX_POWER                       3
 #define SPRINTRON_AUDIO_VISUAL_ALERT                    4
-#define SPRINTRON_CONNECTION_PARAMETERS                 5
+#define SPRINTRON_DEVICE_CONFIG_PARAMETERS              5 //SPRINTRON_CONNECTION_PARAMETERS                 5
 
 // Sprintron Keyfob character value define
 #define RSSI_VALUE_DEFAULT_VALUE                        0xFF
@@ -79,13 +79,16 @@ extern "C"
 // unit is 10ms => 500 = 5s
 #define SUPERVISION_TIMEOUT_DEFAULT_VALUE               500
 #define SLAVE_LATENCY_DEFAULT_VALUE                     0
+// Normal advertising interval in 625us units.  625*32 = 20ms (recommended)
+#define NORMAL_ADV_INTERVAL_DEFAULT_VALUE               32
+#define AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE           200
 
 // Sprintron Service UUID
 #define SPRINTRON_RSSI_REPORT_SERVICE_UUID              0xFFA1
 #define SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID          0xFFA2
 #define SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID          0xFFA4
 #define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID       0xFFA5
-#define SPRINTRON_CONNECTION_UPDATE_SERVICE_UUID        0xFFA6
+#define SPRINTRON_DEVICE_CONFIG_SERVICE_UUID            0xFFA6
 
 // Sprintron Char UUID
 #define SPRINTRON_RSSI_VALUE_UUID                       0xFFC1
@@ -93,14 +96,21 @@ extern "C"
 #define SPRINTRON_PROXIMITY_CONFIG_UUID                 0xFFC3
 #define SPRINTRON_CLIENT_TX_POWER_UUID                  0xFFC4
 #define SPRINTRON_AUDIO_VISUAL_ALERT_UUID               0xFFC5
-#define SPRINTRON_CONNECTION_PARAMETERS_UUID            0xFFC6
+#define SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID         0xFFC6
 
 // Sprintron Keyfob Profile Services bit fields
 #define SPRINTRON_RSSI_REPORT_SERVICE                   0x00000001
 #define SPRINTRON_PROXIMITY_ALERT_SERVICE               0x00000002
 #define SPRINTRON_CLIENT_TX_POWER_SERVICE               0x00000004
 #define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE            0x00000008
-#define SPRINTRON_CONNECTION_UPDATE_SERVICE             0x00000010
+#define SPRINTRON_DEVICE_CONFIG_SERVICE                 0x00000010
+
+// Device config parameters sequence
+#define CONFIG_IDX_CONNECTION_INTERVAL                  0
+#define CONFIG_IDX_SUPERVISION_TIMEOUT                  1
+#define CONFIG_IDX_SLAVE_LATENCY                        2
+#define CONFIG_IDX_NORMAL_ADV_INTERVAL                  3
+#define CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME              4
 
 /*********************************************************************
  * TYPEDEFS

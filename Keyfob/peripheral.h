@@ -102,6 +102,7 @@ typedef enum
   GAPROLE_WAITING_AFTER_TIMEOUT,          //!< Device just timed out from a connection but is not yet advertising, is in waiting period before advertising again
   GAPROLE_CONNECTED,                      //!< In a connection
   GAPROLE_CONNECTED_ADV,                  //!< In a connection + advertising
+  GAPROLE_CONN_PARAM_UPDATED,             //!< Conn parameters are updated
   GAPROLE_ERROR                           //!< Error occurred - invalid state
 } gaprole_States_t;
 
