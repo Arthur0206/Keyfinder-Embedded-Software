@@ -70,9 +70,15 @@ extern "C"
 
 #define CLIENT_TX_POWER_DEFAULT_VALUE                   0x0
 
-#define AUDIO_VISUAL_ALERT_OFF                          0x0
-#define AUDIO_VISUAL_ALERT_LOW                          0x1
-#define AUDIO_VISUAL_ALERT_HIGH                         0x2
+#define AUDIO_VISUAL_ALERT_ALL_OFF                      0x00000000
+#define BUZZER_ALERT_BYTE_ORDER                         0x0
+#define BUZZER_ALERT_OFF                                0x0
+#define BUZZER_ALERT_LOW                                0x1
+#define BUZZER_ALERT_HIGH                               0x2
+#define LED_ALERT_BYTE_ORDER                            0x1
+#define LED_ALERT_OFF                                   0x0
+#define LED_ALERT_ON                                    0x1
+
 
 // unit is 1.25ms => 400 = 500ms
 #define CONNECTION_INTERVAL_DEFAULT_VALUE               400

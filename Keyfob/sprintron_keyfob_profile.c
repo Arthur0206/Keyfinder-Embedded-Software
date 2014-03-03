@@ -172,7 +172,7 @@ static uint8 sprintronClientTxPowerCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static int8 sprintronClientTxPower = CLIENT_TX_POWER_DEFAULT_VALUE;
 
 static uint8 sprintronAudioVisualAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
-static uint8 sprintronAudioVisualAlert = AUDIO_VISUAL_ALERT_OFF;
+static uint32 sprintronAudioVisualAlert = AUDIO_VISUAL_ALERT_ALL_OFF;
 
 static uint8 sprintronConnectionParametersCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint16 sprintronConnectionParameters[3] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
@@ -516,7 +516,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
 	case SPRINTRON_AUDIO_VISUAL_ALERT:
       if ( len == sizeof ( uint8 ) )
       {
-        sprintronAudioVisualAlert = *((uint8*)value);
+        sprintronAudioVisualAlert = *((uint32*)value);
       }
       else
       {
@@ -578,7 +578,7 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
       break;
 
     case SPRINTRON_AUDIO_VISUAL_ALERT:
-      *((uint8*)value) = sprintronAudioVisualAlert;
+      *((uint32*)value) = sprintronAudioVisualAlert;
       break;
 
     case SPRINTRON_CONNECTION_PARAMETERS:
@@ -627,11 +627,16 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
       case SPRINTRON_PROXIMITY_CONFIG_UUID:
       case SPRINTRON_PROXIMITY_ALERT_UUID:
       case SPRINTRON_CLIENT_TX_POWER_UUID:
-      case SPRINTRON_AUDIO_VISUAL_ALERT_UUID:
         *pLen = 1;
         pValue[0] = *pAttr->pValue;
         break;
-        
+
+      case SPRINTRON_AUDIO_VISUAL_ALERT_UUID:
+        *pLen = sizeof(sprintronAudioVisualAlert);
+        *((uint32 *)pValue) = *((uint32 *)(pAttr->pValue));
+
+        break;
+
       case SPRINTRON_CONNECTION_PARAMETERS_UUID:
         *pLen = sizeof(sprintronConnectionParameters);
         osal_memcpy(pValue, pAttr->pValue, *pLen);
@@ -705,14 +710,14 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         break;
 
       case SPRINTRON_AUDIO_VISUAL_ALERT_UUID:
-        if (len > 1)
+        if (len > sizeof(sprintronAudioVisualAlert))
         {
           status = ATT_ERR_INVALID_VALUE_SIZE;
         }
         else
         {
-          uint8 *pCurValue = (uint8 *)pAttr->pValue;
-          *pCurValue = pValue[0];
+          uint32 *pCurValue = (uint32 *)pAttr->pValue;
+          *pCurValue = ((uint32 *)pValue)[0];
           notify = SPRINTRON_AUDIO_VISUAL_ALERT;    			
         }
         break;
