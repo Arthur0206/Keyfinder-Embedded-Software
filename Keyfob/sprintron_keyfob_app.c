@@ -112,6 +112,9 @@
 //#define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_LIMITED
 #define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_GENERAL
 
+/************************************************************************************/
+// These 4 items are not used anymore, but remain here for reference. 
+
 // Minimum connection interval (units of 1.25ms, 80=100ms) if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_MIN_CONN_INTERVAL     80
 
@@ -123,6 +126,7 @@
 
 // Supervision timeout value (units of 10ms, 1000=10s) if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_CONN_TIMEOUT          1000
+/************************************************************************************/
 
 // request RSSI value periodically. Default value is 0 means no periodic event for reading RSSI.
 #define DEFAULT_DESIRED_RSSI_READ_RATE        0
@@ -392,15 +396,35 @@ static void updateRssiProximityAlert( int8 newRSSI )
  *
  * @return  none
  */
-static void updateConnParametersDeviceConfig( )
+static void updateConnParametersDeviceConfig( uint16 paramIdx )
 {
-    // update the 3 connection parameters into local copy keyfobDeviceConfigParameters
-	GAPRole_GetParameter( GAPROLE_CONN_INTERVAL, keyfobDeviceConfigParameters + CONFIG_IDX_CONNECTION_INTERVAL );
-	GAPRole_GetParameter( GAPROLE_CONN_TIMEOUT, keyfobDeviceConfigParameters + CONFIG_IDX_SUPERVISION_TIMEOUT );
-	GAPRole_GetParameter( GAPROLE_CONN_LATENCY, keyfobDeviceConfigParameters + CONFIG_IDX_SLAVE_LATENCY );
+    switch( paramIdx )
+    { 
+      case CONFIG_IDX_CONNECTION_INTERVAL:
+        {
+          // update the 3 connection parameters into local copy keyfobDeviceConfigParameters
+          GAPRole_GetParameter( GAPROLE_CONN_INTERVAL, keyfobDeviceConfigParameters + CONFIG_IDX_CONNECTION_INTERVAL );
+          GAPRole_GetParameter( GAPROLE_CONN_TIMEOUT, keyfobDeviceConfigParameters + CONFIG_IDX_SUPERVISION_TIMEOUT );
+          GAPRole_GetParameter( GAPROLE_CONN_LATENCY, keyfobDeviceConfigParameters + CONFIG_IDX_SLAVE_LATENCY );
 
-    // update the 3 connection parameter into corresponding attributes
-    sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
+          // update the 3 connection parameter into corresponding attributes
+          sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
+        }
+        break;
+        
+      case CONFIG_IDX_NORMAL_ADV_INTERVAL:
+        {
+          // update normal adv interval into local copy keyfobDeviceConfigParameters
+          keyfobDeviceConfigParameters[CONFIG_IDX_NORMAL_ADV_INTERVAL] = GAP_GetParamValue( TGAP_CONN_ADV_INT_MIN );
+          
+          // update normal adv interval into corresponding attributes
+          sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
+        }
+        break;
+        
+      default:
+        break;
+    }
 }
 
 /*********************************************************************
@@ -423,7 +447,10 @@ void KeyFobApp_Init( uint8 task_id )
     
   // Setup the GAP
   VOID GAP_SetParamValue( TGAP_CONN_PAUSE_PERIPHERAL, DEFAULT_CONN_PAUSE_PERIPHERAL );
-  
+  // setup normal adv interval to default value
+  VOID GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
+  VOID GAP_SetParamValue( TGAP_CONN_ADV_INT_MAX, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
+
   // Setup the GAP Peripheral Role Profile
   {
 #ifdef USE_WHITE_LIST_ADV 
@@ -440,10 +467,10 @@ void KeyFobApp_Init( uint8 task_id )
     uint16 gapRole_AdvertOffTime = 0;
 
     uint8 enable_update_request = DEFAULT_ENABLE_UPDATE_REQUEST;
-    uint16 desired_min_interval = DEFAULT_DESIRED_MIN_CONN_INTERVAL;
-    uint16 desired_max_interval = DEFAULT_DESIRED_MAX_CONN_INTERVAL;
-    uint16 desired_slave_latency = DEFAULT_DESIRED_SLAVE_LATENCY;
-    uint16 desired_conn_timeout = DEFAULT_DESIRED_CONN_TIMEOUT;
+    uint16 desired_min_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
+    uint16 desired_max_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
+    uint16 desired_slave_latency = SLAVE_LATENCY_DEFAULT_VALUE;
+    uint16 desired_conn_timeout = SUPERVISION_TIMEOUT_DEFAULT_VALUE;
     uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
 
 #ifdef USE_WHITE_LIST_ADV 
@@ -962,6 +989,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           // Visual feedback that we are advertising to all devices (not using whitelist).
           HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
         }
+
+        // update noraml adv interval in device config service attribute table
+        updateConnParametersDeviceConfig( CONFIG_IDX_NORMAL_ADV_INTERVAL );
       }
       break;
       
@@ -1008,8 +1038,8 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           osal_start_timerEx( keyfobapp_TaskID, KFD_ADV_IN_CONNECTION_EVT, ADV_IN_CONN_WAIT );
         #endif
 
-		// udpate connection parameters for corresponding attributes.
-		updateConnParametersDeviceConfig();
+		// udpate connection parameters in device config service attribute table.
+		updateConnParametersDeviceConfig( CONFIG_IDX_CONNECTION_INTERVAL );
 
         // Turn off the LED that shows we're advertising without whitelist.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
@@ -1054,8 +1084,10 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 	// udpate connection parameters for corresponding attributes.
     case GAPROLE_CONN_PARAM_UPDATED:
       {
-        updateConnParametersDeviceConfig();
+		// udpate connection parameters in device config service attribute table.
+		updateConnParametersDeviceConfig( CONFIG_IDX_CONNECTION_INTERVAL );
       }
+      break;
     
     default:
       // do nothing
