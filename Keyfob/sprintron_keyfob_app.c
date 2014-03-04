@@ -383,7 +383,7 @@ static void updateRssiProximityAlert( int8 newRSSI )
  * @brief   Added by Sprintron
  *              This function will be called when:
  *              1. device is connected
- *              2. GAP send 
+ *              2. GAP send GAPROLE_CONN_PARAM_UPDATED event
  *              to write current connection parameters into corresponding attributes.
  * @param   rssi value
  *
@@ -393,8 +393,8 @@ static void updateConnParametersDeviceConfig( )
 {
     // update the 3 connection parameters into local copy keyfobDeviceConfigParameters
 	GAPRole_GetParameter( GAPROLE_CONN_INTERVAL, keyfobDeviceConfigParameters + CONFIG_IDX_CONNECTION_INTERVAL );
-	GAPRole_GetParameter( GAPROLE_CONN_LATENCY, keyfobDeviceConfigParameters + CONFIG_IDX_SUPERVISION_TIMEOUT );
-	GAPRole_GetParameter( GAPROLE_CONN_TIMEOUT, keyfobDeviceConfigParameters + CONFIG_IDX_SLAVE_LATENCY );
+	GAPRole_GetParameter( GAPROLE_CONN_TIMEOUT, keyfobDeviceConfigParameters + CONFIG_IDX_SUPERVISION_TIMEOUT );
+	GAPRole_GetParameter( GAPROLE_CONN_LATENCY, keyfobDeviceConfigParameters + CONFIG_IDX_SLAVE_LATENCY );
 
     // update the 3 connection parameter into corresponding attributes
     sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );

@@ -179,7 +179,7 @@ static uint16 sprintronDeviceConfigParameters[5] = { CONNECTION_INTERVAL_DEFAULT
                                                    SUPERVISION_TIMEOUT_DEFAULT_VALUE,
                                                    SLAVE_LATENCY_DEFAULT_VALUE,
                                                    NORMAL_ADV_INTERVAL_DEFAULT_VALUE,
-                                                   AUDIO_VISUAL_ALERT_TIME };
+                                                   AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE };
 
 /*********************************************************************
  * Profile Attributes - Table
