@@ -540,7 +540,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
         }
 		  
         // if normal adv interval is changed, call GAP api to update normal adv interval.
-        if ( !osal_memcmp( (void*)(value + CONFIG_IDX_NORMAL_ADV_INTERVAL), 
+        if ( !osal_memcmp( (void*)((uint16*)value + CONFIG_IDX_NORMAL_ADV_INTERVAL), 
 							  (void*)(sprintronDeviceConfigParameters + CONFIG_IDX_NORMAL_ADV_INTERVAL), 2) )
         {
           GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, ((uint16*)value)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
@@ -548,7 +548,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
         }
 
         // do not really update connection parameters until the current connection parameters is really changed.
-        osal_memcpy( (void*)(sprintronDeviceConfigParameters + 3), value, 4);
+        osal_memcpy( (void*)(sprintronDeviceConfigParameters + CONFIG_IDX_NORMAL_ADV_INTERVAL), value, 4);
       }
       else
       {

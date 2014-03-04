@@ -133,6 +133,9 @@
 // Connection Pause Peripheral time value (in seconds)
 #define DEFAULT_CONN_PAUSE_PERIPHERAL         5
 
+// Fast adv time after pressing button
+#define FAST_ADV_TIME                         30
+
 // buzzer_state values
 #define BUZZER_OFF                            0
 #define BUZZER_ON                             1
@@ -697,8 +700,8 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     // turn on adv
     GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
 
-    // set a 15s timer for stopping the non-whitelist adv state.
-    osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, 15000 );
+    // set a 30s timer for stopping the non-whitelist adv state.
+    osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, FAST_ADV_TIME );
   }
 
   if (events & KFD_NON_WHITELIST_STOP_EVT)
