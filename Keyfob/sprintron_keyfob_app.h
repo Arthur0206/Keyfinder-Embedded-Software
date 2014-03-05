@@ -68,6 +68,8 @@ extern "C"
 #define KFD_WHITELIST_START_EVT                           0x0100
 #define KFD_CONNECTION_INTERVAL_EVT                       0x0200
 #define KFD_WAIT_ACCEPTING_CONN_FAIL_EVT                  0x0400
+#define KFD_BUZZER_ALERT_TIME_EXPIRED_EVT                 0x0800
+#define KFD_LED_ALERT_TIME_EXPIRED_EVT                    0x1000
 
 // Key Fob NV Item ID
 // According to osal api document, application can use item id range from 0x80~0xfe, we choose something in between.

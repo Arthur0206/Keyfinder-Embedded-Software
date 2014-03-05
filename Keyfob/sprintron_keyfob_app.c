@@ -279,8 +279,8 @@ static uint8 is_waiting_for_accept_conn = 0;
  * LOCAL FUNCTIONS
  */
 static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg );
-static void keyfobapp_PerformAlert( void );
-static void keyfobapp_StopAlert( void );
+static void keyfobapp_PerformBuzzerAlert( void );
+static void keyfobapp_StopBuzzerAlert( void );
 static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
@@ -689,30 +689,18 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
         osal_pwrmgr_device( PWRMGR_BATTERY );
       #endif
 
-      // check to see if buzzer has beeped maximum number of times
-      // if it has, then don't turn it back on
-      if ( ( buzzer_beep_count < keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] ) &&
-           ( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF) )
+      // if buzzer alert config parameter is BUZZER_ALERT_OFF, don't turn it back on
+      if ( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
       {
         osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 800 );
-      }
-
-      // if reach maximum number of times, reset counter, and set SPRINTRON_AUDIO_VISUAL_ALERT attribute to OFF.
-      if ( buzzer_beep_count >= keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] )
-      {
-        // set visual alert level to off.
-        ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
-        sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
-
-        // reset beep counter.
-        buzzer_beep_count = 0;
       }
     }
     else if ( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
     {
       // if this event was triggered while the buzzer is off then turn it on if appropriate
-      keyfobapp_PerformAlert();
+      keyfobapp_PerformBuzzerAlert();
     }
+    // if buzzer_state is OFF, and buzzer config param is OFF, then do nothing (don't start a new buzzer toggle timer).
 
     return (events ^ KFD_TOGGLE_BUZZER_EVT);
   }
@@ -750,9 +738,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     {
       // turn off adv first
       uint8 turnOnAdv = FALSE;
-      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
- 
-      is_in_fast_adv_mode = 0;
+      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv ); 
       
       // turn on adv with a delay. if no delay it won't work for some reasons
       osal_start_timerEx( keyfobapp_TaskID, KFD_WHITELIST_START_EVT, 500 );
@@ -764,6 +750,8 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       // set adv filter policy to only accept devices in whitelist
       GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
     }
+
+	is_in_fast_adv_mode = 0;
 
     // Turn off the LED that shows we're advertising without whitelist. 
     HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
@@ -809,7 +797,29 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
     }
   }
-  
+
+  // turn off buzzer alert when buzzer alert time expired.
+  if (events & KFD_BUZZER_ALERT_TIME_EXPIRED_EVT)
+  {
+    if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
+    {
+      ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
+      sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+      keyfobapp_StopBuzzerAlert();
+    }
+  }
+
+  // turn off led alert when led alert time expired.
+  if (events & KFD_LED_ALERT_TIME_EXPIRED_EVT)
+  {
+    if( ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] != LED_ALERT_OFF )
+    {
+      ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] = LED_ALERT_OFF;
+      sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+      HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+    }
+  }
+
   // Discard unknown events
   return 0;
 }
@@ -940,7 +950,7 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 }
 
 /*********************************************************************
- * @fn      keyfobapp_PerformAlert
+ * @fn      keyfobapp_PerformBuzzerAlert
  *
  * @brief   Performs an alert
  *
@@ -948,7 +958,7 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
  *
  * @return  none
  */
-static void keyfobapp_PerformAlert( void )
+static void keyfobapp_PerformBuzzerAlert( void )
 {
     switch( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] )
     {
@@ -962,8 +972,7 @@ static void keyfobapp_PerformAlert( void )
       buzzer_state = BUZZER_ON;
       // only run buzzer for 200ms
       osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 200 );
-
-      HalLedSet( (HAL_LED_1 | HAL_LED_2), HAL_LED_MODE_OFF );
+      
       break;
 
     case BUZZER_ALERT_HIGH:
@@ -976,22 +985,20 @@ static void keyfobapp_PerformAlert( void )
       buzzer_state = BUZZER_ON;
       // only run buzzer for 200ms
       osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 200 );
-
-      HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
-      HalLedSet( HAL_LED_2, HAL_LED_MODE_FLASH );
+      
       break;
 
     case BUZZER_ALERT_OFF:
         // Fall through
     default:
-      keyfobapp_StopAlert();
+      keyfobapp_StopBuzzerAlert();
       break;
     }
 
 }
 
 /*********************************************************************
- * @fn      keyfobapp_StopAlert
+ * @fn      keyfobapp_StopBuzzerAlert
  *
  * @brief   Stops an alert
  *
@@ -999,13 +1006,11 @@ static void keyfobapp_PerformAlert( void )
  *
  * @return  none
  */
-void keyfobapp_StopAlert( void )
+void keyfobapp_StopBuzzerAlert( void )
 {
 
   buzzerStop();
   buzzer_state = BUZZER_OFF;
-  HalLedSet( (HAL_LED_1 | HAL_LED_2), HAL_LED_MODE_OFF );
-
 
   #if defined ( POWER_SAVING )
     osal_pwrmgr_device( PWRMGR_BATTERY );
@@ -1111,17 +1116,6 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 
 		  osal_stop_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT );
         }
-
-        // if beep status is on, turn it off, and stop alert.
-        if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
-        {
-          ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
-          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
-          keyfobapp_StopAlert();
-        }
-
-        // Turn off the LED that shows that we're advertising without whitelist.
-        HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
       }
       break;
 
@@ -1137,14 +1131,6 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 		  HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
 
 		  osal_stop_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT );
-        }
-        
-        // if beep status is on, turn it off, and stop alert.
-        if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
-        {
-          ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
-          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
-          keyfobapp_StopAlert();
         }
       }
       break;
@@ -1199,25 +1185,34 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
     {
 	  sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
 
+      // if buzzer alert config param is not OFF, start buzzer alert and setup a time. 
       if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
       {
-        keyfobapp_PerformAlert();
+        keyfobapp_PerformBuzzerAlert();
+        
         buzzer_beep_count = 0;
+        
+        // start evt for buzzer alert time expired.
+        osal_start_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT, keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] );
       }
       else
       {
-        keyfobapp_StopAlert();
+        // if buzzer alert config param is OFF, stop buzzer alert
+        keyfobapp_StopBuzzerAlert();
       }
-
-      if( ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_OFF)
+      
+      if( ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_ON)
       {
-        // Turn off the LED that shows that we're advertising without whitelist.
-        HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
-      }
-      else
-      {
-        // Turn off the LED that shows that we're advertising without whitelist.
+        // Turn on the LED alert.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+        
+        // start evt for led alert time expired.
+        osal_start_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT, keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] );
+      }
+      else
+      {
+        // Turn off the LED alert.
+        HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
       }
     }
     break;
