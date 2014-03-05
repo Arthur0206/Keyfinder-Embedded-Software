@@ -751,8 +751,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       // turn off adv first
       uint8 turnOnAdv = FALSE;
       GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
-
-      // fast adv is disabled, so we've left fast adv mode.
+ 
       is_in_fast_adv_mode = 0;
       
       // turn on adv with a delay. if no delay it won't work for some reasons
@@ -804,9 +803,10 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     {
       // terminate the connection
       GAPRole_TerminateConnection();
-
-      // note that we've stopped waiting for accepting connection.
+ 
       is_waiting_for_accept_conn = 0;
+
+      HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
     }
   }
   
@@ -1070,14 +1070,12 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 		
 		  // Turn off the LED2 that shows we're advertising without whitelist. 
 		  HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+		  
+		  is_in_fast_adv_mode = 0;
 
           // Turn on the LED1 to show that keyfob is waiting for user to accept connection.
 		  HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
 		  
-		  // note that we've left fast adv mode.
-		  is_in_fast_adv_mode = 0;
-
-          // note that we've started waiting for accepting connection.
           is_waiting_for_accept_conn = 1;
 
           // setup a event to terminate connection if user doesn't press button within a period time
