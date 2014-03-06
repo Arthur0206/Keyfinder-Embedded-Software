@@ -138,7 +138,7 @@
 #define DEFAULT_CONN_PAUSE_PERIPHERAL         5
 
 // Fast adv time after pressing button
-#define FAST_ADV_TIME                         30
+#define FAST_ADV_TIME                         30000
 
 // buzzer_state values
 #define BUZZER_OFF                            0
@@ -285,7 +285,7 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
 static void updateRssiProximityAlert( int8 newRSSI );
-static void updateConnParametersDeviceConfig( void );
+static void updateConnParametersDeviceConfig( uint16 paramIdx );
 static void putBDAddrIntoAdvData( uint8 *bd_addr );
 static uint8 isProximityAlertToggleNeeded( void );
 
@@ -690,12 +690,12 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
       #endif
 
       // if buzzer alert config parameter is BUZZER_ALERT_OFF, don't turn it back on
-      if ( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
+      if ( ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
       {
         osal_start_timerEx( keyfobapp_TaskID, KFD_TOGGLE_BUZZER_EVT, 800 );
       }
     }
-    else if ( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
+    else if ( ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
     {
       // if this event was triggered while the buzzer is off then turn it on if appropriate
       keyfobapp_PerformBuzzerAlert();
@@ -726,6 +726,9 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
     // turn on adv
     GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
+			
+	// Visual feedback that we are advertising to all devices (not using whitelist).
+	HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
 
     // set a 30s timer for stopping the non-whitelist adv state.
     osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, FAST_ADV_TIME );
@@ -801,9 +804,9 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   // turn off buzzer alert when buzzer alert time expired.
   if (events & KFD_BUZZER_ALERT_TIME_EXPIRED_EVT)
   {
-    if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
+    if( ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF )
     {
-      ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
+      ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
       sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
       keyfobapp_StopBuzzerAlert();
     }
@@ -812,9 +815,9 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   // turn off led alert when led alert time expired.
   if (events & KFD_LED_ALERT_TIME_EXPIRED_EVT)
   {
-    if( ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] != LED_ALERT_OFF )
+    if( ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] != LED_ALERT_OFF )
     {
-      ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] = LED_ALERT_OFF;
+      ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] = LED_ALERT_OFF;
       sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
       HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
     }
@@ -872,15 +875,12 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
     if ( gapProfileState != GAPROLE_CONNECTED && is_in_fast_adv_mode == 0 )
     {
       uint8 turnOnAdv = FALSE;
-      
+
+	  // note that we've entered fast adv mode. if set here, can avoid the issue of mutiple button press in a short time.
+	  is_in_fast_adv_mode = 1;
+
       // turn off adv first
       GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
-
-      // note that we've entered fast adv mode. if set here, can avoid the issue of mutiple button press in a short time.
-      is_in_fast_adv_mode = 1;
-	  		  
-	  // Visual feedback that we are advertising to all devices (not using whitelist).
-	  HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
 
       // turn on adv with a delay. if no delay it won't work for some reasons
       osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_START_EVT, 500 );
@@ -960,7 +960,7 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
  */
 static void keyfobapp_PerformBuzzerAlert( void )
 {
-    switch( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] )
+    switch( ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] )
     {
     case BUZZER_ALERT_LOW:
 
@@ -1186,14 +1186,14 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
 	  sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
 
       // if buzzer alert config param is not OFF, start buzzer alert and setup a time. 
-      if( ((uint8 *)keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
+      if( ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
       {
         keyfobapp_PerformBuzzerAlert();
         
         buzzer_beep_count = 0;
         
         // start evt for buzzer alert time expired.
-        osal_start_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT, keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] );
+        osal_start_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT, keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME]*1000 );
       }
       else
       {
@@ -1201,13 +1201,13 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
         keyfobapp_StopBuzzerAlert();
       }
       
-      if( ((uint8 *)keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_ON)
+      if( ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_ON)
       {
         // Turn on the LED alert.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
         
         // start evt for led alert time expired.
-        osal_start_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT, keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME] );
+        osal_start_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT, keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME]*1000 );
       }
       else
       {
@@ -1231,5 +1231,3 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
 
 }
 
-/*********************************************************************
-*********************************************************************/

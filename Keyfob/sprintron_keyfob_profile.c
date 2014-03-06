@@ -51,6 +51,7 @@
 #include "gapbondmgr.h"
 
 #include "sprintron_keyfob_profile.h"
+#include "peripheral.h"
 
 /*********************************************************************
  * MACROS
@@ -528,27 +529,8 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
 
 	case SPRINTRON_DEVICE_CONFIG_PARAMETERS:
       if ( len == sizeof ( sprintronDeviceConfigParameters ) )
-      {  
-        // if connection parameters are changed, send connection update hci command to iPhone. 3 uint16 are equal to 6 bytes.
-        if ( !osal_memcmp( (void*)value, (void*)sprintronDeviceConfigParameters, 6) )
-        {
-          GAPRole_SendUpdateParam( ((uint16*)value)[CONFIG_IDX_CONNECTION_INTERVAL], 
-								    ((uint16*)value)[CONFIG_IDX_CONNECTION_INTERVAL],
-								    ((uint16*)value)[CONFIG_IDX_SLAVE_LATENCY], 
-								    ((uint16*)value)[CONFIG_IDX_SUPERVISION_TIMEOUT],
-								    GAPROLE_NO_ACTION );
-        }
-		  
-        // if normal adv interval is changed, call GAP api to update normal adv interval.
-        if ( !osal_memcmp( (void*)((uint16*)value + CONFIG_IDX_NORMAL_ADV_INTERVAL), 
-							  (void*)(sprintronDeviceConfigParameters + CONFIG_IDX_NORMAL_ADV_INTERVAL), 2) )
-        {
-          GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, ((uint16*)value)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
-          GAP_SetParamValue( TGAP_CONN_ADV_INT_MAX, ((uint16*)value)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
-        }
-
-        // do not really update connection parameters until the current connection parameters is really changed.
-        osal_memcpy( (void*)(sprintronDeviceConfigParameters + CONFIG_IDX_NORMAL_ADV_INTERVAL), value, 4);
+      { 
+		osal_memcpy(sprintronDeviceConfigParameters, value, sizeof(sprintronDeviceConfigParameters));
       }
       else
       {
@@ -750,8 +732,29 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         }
         else
         {  
-          uint8 *pCurValue = (uint8 *)pAttr->pValue;
-          osal_memcpy(pCurValue, pValue, len);
+          uint16 *pCurValue = (uint16 *)pAttr->pValue;
+		  
+		  // if connection parameters are changed, send connection update hci command to iPhone. 3 uint16 are equal to 6 bytes.
+		  if ( !osal_memcmp( (void*)pValue, (void*)pCurValue, 6) )
+		  {
+			GAPRole_SendUpdateParam( ((uint16*)pValue)[CONFIG_IDX_CONNECTION_INTERVAL], 
+									  ((uint16*)pValue)[CONFIG_IDX_CONNECTION_INTERVAL],
+									  ((uint16*)pValue)[CONFIG_IDX_SLAVE_LATENCY], 
+									  ((uint16*)pValue)[CONFIG_IDX_SUPERVISION_TIMEOUT],
+									  GAPROLE_NO_ACTION );
+		  }
+			
+		  // if normal adv interval is changed, call GAP api to update normal adv interval.
+		  if ( !osal_memcmp( (void*)((uint16*)pValue + CONFIG_IDX_NORMAL_ADV_INTERVAL), 
+								(void*)(pCurValue + CONFIG_IDX_NORMAL_ADV_INTERVAL), 2) )
+		  {
+			GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+			GAP_SetParamValue( TGAP_CONN_ADV_INT_MAX, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+		  }
+		  
+		  // do not really update connection parameters until the current connection parameters is really changed.
+		  osal_memcpy( (void*)(pCurValue + CONFIG_IDX_NORMAL_ADV_INTERVAL), (uint16*)pValue + CONFIG_IDX_NORMAL_ADV_INTERVAL, 4);
+		  
           notify = SPRINTRON_DEVICE_CONFIG_PARAMETERS;
         }
         break;
