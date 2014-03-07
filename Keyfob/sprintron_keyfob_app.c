@@ -132,7 +132,7 @@
 #define DEFAULT_DESIRED_RSSI_READ_RATE        0
 
 // Whether to enable automatic parameter update request when a connection is formed
-#define DEFAULT_ENABLE_UPDATE_REQUEST         TRUE
+#define DEFAULT_ENABLE_UPDATE_REQUEST         FALSE
 
 // Connection Pause Peripheral time value (in seconds)
 #define DEFAULT_CONN_PAUSE_PERIPHERAL         5
@@ -285,7 +285,6 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
 static void updateRssiProximityAlert( int8 newRSSI );
-static void updateConnParametersDeviceConfig( uint16 paramIdx );
 static void putBDAddrIntoAdvData( uint8 *bd_addr );
 static uint8 isProximityAlertToggleNeeded( void );
 static void updateConnParamCB( uint16 connInterval, uint16 connSlaveLatency,uint16 connTimeout );
@@ -404,49 +403,6 @@ static void updateRssiProximityAlert( int8 newRSSI )
 }
 
 /*********************************************************************
- * @fn      updateConnParametersDeviceConfig
- *
- * @brief   Added by Sprintron
- *              This function will be called when:
- *              1. device is connected
- *              2. GAP send GAPROLE_CONN_PARAM_UPDATED event
- *              to write current connection parameters into corresponding attributes.
- * @param   rssi value
- *
- * @return  none
- */
-static void updateConnParametersDeviceConfig( uint16 paramIdx )
-{
-  switch( paramIdx )
-  { 
-    case CONFIG_IDX_CONNECTION_INTERVAL:
-      {
-        // update the 3 connection parameters into local copy keyfobDeviceConfigParameters
-        GAPRole_GetParameter( GAPROLE_CONN_INTERVAL, keyfobDeviceConfigParameters + CONFIG_IDX_CONNECTION_INTERVAL );
-        GAPRole_GetParameter( GAPROLE_CONN_TIMEOUT, keyfobDeviceConfigParameters + CONFIG_IDX_SUPERVISION_TIMEOUT );
-        GAPRole_GetParameter( GAPROLE_CONN_LATENCY, keyfobDeviceConfigParameters + CONFIG_IDX_SLAVE_LATENCY );
-
-        // update the 3 connection parameter into corresponding attributes
-        sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
-      }
-      break;
-        
-    case CONFIG_IDX_NORMAL_ADV_INTERVAL:
-      {
-        // update normal adv interval into local copy keyfobDeviceConfigParameters
-        keyfobDeviceConfigParameters[CONFIG_IDX_NORMAL_ADV_INTERVAL] = GAP_GetParamValue( TGAP_CONN_ADV_INT_MIN );
-          
-        // update normal adv interval into corresponding attributes
-        sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
-      }
-      break;
-        
-    default:
-      break;
-  }
-}
-
-/*********************************************************************
  * @fn      updateConnParamCB
  *
  * @brief   Added by Sprintron
@@ -458,8 +414,14 @@ static void updateConnParametersDeviceConfig( uint16 paramIdx )
  * @return  none
  */
 static void updateConnParamCB( uint16 connInterval, uint16 connSlaveLatency,uint16 connTimeout )
-{
-  updateConnParametersDeviceConfig( CONFIG_IDX_CONNECTION_INTERVAL );
+{ 
+  // update the 3 connection parameters into local copy keyfobDeviceConfigParameters
+  keyfobDeviceConfigParameters[CONFIG_IDX_CONNECTION_INTERVAL] = connInterval;
+  keyfobDeviceConfigParameters[CONFIG_IDX_SLAVE_LATENCY] = connSlaveLatency;
+  keyfobDeviceConfigParameters[CONFIG_IDX_SUPERVISION_TIMEOUT] = connTimeout;
+
+  // update the 3 connection parameter into corresponding attributes
+  sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
 }
 
 /*********************************************************************
@@ -1120,8 +1082,13 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           osal_start_timerEx( keyfobapp_TaskID, KFD_ADV_IN_CONNECTION_EVT, ADV_IN_CONN_WAIT );
         #endif
 
-		// udpate connection parameters in device config service attribute table.
-		updateConnParametersDeviceConfig( CONFIG_IDX_CONNECTION_INTERVAL );
+        // update the 3 connection parameters into local copy keyfobDeviceConfigParameters
+        GAPRole_GetParameter( GAPROLE_CONN_INTERVAL, keyfobDeviceConfigParameters + CONFIG_IDX_CONNECTION_INTERVAL );
+        GAPRole_GetParameter( GAPROLE_CONN_TIMEOUT, keyfobDeviceConfigParameters + CONFIG_IDX_SUPERVISION_TIMEOUT );
+        GAPRole_GetParameter( GAPROLE_CONN_LATENCY, keyfobDeviceConfigParameters + CONFIG_IDX_SLAVE_LATENCY );
+
+        // update the 3 connection parameter into corresponding attributes
+        sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS, sizeof(keyfobDeviceConfigParameters), keyfobDeviceConfigParameters );
 
         // setup connection interval event callback
         HCI_EXT_ConnEventNoticeCmd( keyfobapp_TaskID, KFD_CONNECTION_INTERVAL_EVT );
