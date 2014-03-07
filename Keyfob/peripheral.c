@@ -1181,11 +1181,6 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
             }
           }
         }
-
-		// inform sprintron_keyfob_app that connection parameters are changed.
-		gapRole_state = GAPROLE_CONN_PARAM_UPDATED;
-
-		notify = TRUE;
       }
       break;
 
