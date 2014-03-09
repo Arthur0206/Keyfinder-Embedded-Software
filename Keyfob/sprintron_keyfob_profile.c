@@ -69,6 +69,17 @@
  * GLOBAL VARIABLES
  */
 
+// Sprintron Man Sec Service UUID
+CONST uint8 sprintronManSecServiceUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_MAN_SEC_SERVICE_UUID ), HI_UINT16( SPRINTRON_MAN_SEC_SERVICE_UUID )
+};
+
+// Sprintron Man Sec UUID
+CONST uint8 sprintronManSecUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_MAN_SEC_UUID ), HI_UINT16( SPRINTRON_MAN_SEC_UUID )
+};
 
 // Sprintron RSSI Report Service UUID
 CONST uint8 sprintronRssiReportServiceUUID[ATT_BT_UUID_SIZE] =
@@ -153,11 +164,17 @@ static sprintronKeyfobCBs_t *sk_AppCBs = NULL;
  * Profile Attributes - variables
  */
 
+static CONST gattAttrType_t sprintronManSecService = { ATT_BT_UUID_SIZE, sprintronManSecServiceUUID };
 static CONST gattAttrType_t sprintronRssiReportService = { ATT_BT_UUID_SIZE, sprintronRssiReportServiceUUID };
 static CONST gattAttrType_t sprintronProximityAlertService = { ATT_BT_UUID_SIZE, sprintronProximityAlertServiceUUID };
 static CONST gattAttrType_t sprintronClientTxPowerService = { ATT_BT_UUID_SIZE, sprintronClientTxPowerServiceUUID };
 static CONST gattAttrType_t sprintronAudioVisualAlertService = { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertServiceUUID };
 static CONST gattAttrType_t sprintronDeviceConfigService = { ATT_BT_UUID_SIZE, sprintronDeviceConfigServiceUUID };
+
+static uint8 sprintronManSecCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
+static uint8 sprintronManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  // MIC
+                                     MAN_SEC_FLAG_UNKNOWN,                    // Flag
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };    // BD Addr
 
 static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
 static int8 sprintronRssiValue = RSSI_VALUE_DEFAULT_VALUE;
@@ -185,6 +202,29 @@ static uint16 sprintronDeviceConfigParameters[5] = { CONNECTION_INTERVAL_DEFAULT
 /*********************************************************************
  * Profile Attributes - Table
  */
+static gattAttribute_t sprintronManSecAttrTbl[] = 
+{  // Sprintron Rssi Report Service
+  {
+    { ATT_BT_UUID_SIZE, primaryServiceUUID },
+    GATT_PERMIT_READ,
+    0,
+    (uint8 *)&sprintronManSecService
+  },
+    // Characteristic Declaration
+    {
+      {ATT_BT_UUID_SIZE, characterUUID},
+	  GATT_PERMIT_READ,
+	  0,
+	  (uint8 *)&sprintronManSecCharProps
+    },
+      // Man Sec
+      { 
+        { ATT_BT_UUID_SIZE, sprintronManSecUUID},
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE /* | GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE*/, 
+        0, 
+        (uint8 *)&sprintronManSec
+      },
+};
 
 static gattAttribute_t sprintronRssiReportAttrTbl[] =
 {
@@ -333,7 +373,7 @@ static gattAttribute_t sprintronDeviceConfigAttrTbl[] =
       // Device Config Parameters
       { 
         { ATT_BT_UUID_SIZE, sprintronDeviceConfigParametersUUID},
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE /*| GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE*/, 
         0, 
         (uint8 *)sprintronDeviceConfigParameters
       },
@@ -377,6 +417,13 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
 {
   uint8 status = SUCCESS;
 
+  if ( services & SPRINTRON_RSSI_MAN_SEC_SERVICE )
+  {
+	status = GATTServApp_RegisterService( sprintronManSecAttrTbl,
+									      GATT_NUM_ATTRS( sprintronManSecAttrTbl ),
+										  &sprintronKeyfobCBs);
+  }
+  
   if ( services & SPRINTRON_RSSI_REPORT_SERVICE )
   {
     GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronRssiValueConfig );
@@ -462,6 +509,17 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
+    case SPRINTRON_MAN_SEC:
+	  if ( len == sizeof ( sprintronManSec ) )
+	  {
+        osal_memcpy(sprintronManSec, value, sizeof(sprintronManSec));
+	  }
+	  else
+	  {
+	    ret = bleInvalidRange;
+	  }
+	  break;
+	  
     case SPRINTRON_RSSI_VALUE:
       if ( len == sizeof ( int8 ) ) 
       {
@@ -564,6 +622,10 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
+    case SPRINTRON_MAN_SEC:
+      osal_memcpy(value, sprintronManSec, sizeof(sprintronManSec));
+      break;
+
     case SPRINTRON_RSSI_VALUE:
       *((int8*)value) = sprintronRssiValue;
       break;
@@ -626,6 +688,11 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
     {
       // No need for "GATT_SERVICE_UUID" or "GATT_CLIENT_CHAR_CFG_UUID" cases;
       // gattserverapp handles those types for reads 
+      case SPRINTRON_MAN_SEC_UUID:
+        *pLen = sizeof(sprintronManSec);
+        osal_memcpy(pValue, pAttr->pValue, *pLen);
+        break;
+        
       case SPRINTRON_RSSI_VALUE_UUID:
       case SPRINTRON_PROXIMITY_CONFIG_UUID:
       case SPRINTRON_PROXIMITY_ALERT_UUID:
@@ -644,7 +711,7 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
         *pLen = sizeof(sprintronDeviceConfigParameters);
         osal_memcpy(pValue, pAttr->pValue, *pLen);
         break;
-        
+
       default:
         // Should never get here!
         *pLen = 0;
@@ -684,6 +751,20 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
     uint16 uuid = BUILD_UINT16( pAttr->type.uuid[0], pAttr->type.uuid[1]);
     switch ( uuid )
     {
+      case SPRINTRON_MAN_SEC_UUID:
+        if ( len > sizeof(sprintronManSec) )
+        {
+          status = ATT_ERR_INVALID_VALUE_SIZE;
+        }
+        else
+        {
+          //Write the value
+          uint8 *pCurValue = (uint8 *)pAttr->pValue;
+		  osal_memcpy( (void*)pCurValue, (void*)pValue, sizeof(sprintronManSec) );
+          notify = SPRINTRON_MAN_SEC;          
+        }
+        break;
+		
       case SPRINTRON_CLIENT_TX_POWER_UUID:
         if (len > 1)
         {

@@ -155,6 +155,14 @@
 
 #define WAIT_ACCEPTING_CONN_TIME              20000 // 20s
 
+// Definition for PTM
+// #define ENABLE_PTM                                            // Disable PTM changes for now. When enable, also add "HAL_UART" into IAR preprocessor section in Config tab.
+#define PTM                                   4 //Pin to use to check if Tester is connected 
+#define RDY                                   5 
+#define PDUP0                                 5 
+#define P0ICON                                0 
+#define TESTER_CONNECTED()                    (P0_4==0)?TRUE:FALSE
+
 /*********************************************************************
  * TYPEDEFS
  */
@@ -179,13 +187,15 @@ static uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 static gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
+static uint8 keyfobManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  // MIC
+                                  MAN_SEC_FLAG_UNKNOWN,                    // Flag
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };    // BD Addr
 static int8 keyfobRssiValue = RSSI_VALUE_DEFAULT_VALUE;   
 static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE; 
 static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;    
 static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;  
 static uint32 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_ALL_OFF; 
-static uint16 keyfobDeviceConfigParameters[5] = { 
-	                                              // connection parameters
+static uint16 keyfobDeviceConfigParameters[5] = { // connection parameters
 	                                              CONNECTION_INTERVAL_DEFAULT_VALUE,
 	                                              SUPERVISION_TIMEOUT_DEFAULT_VALUE,
 	                                              SLAVE_LATENCY_DEFAULT_VALUE,
@@ -284,10 +294,13 @@ static void keyfobapp_StopBuzzerAlert( void );
 static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
-static void updateRssiProximityAlert( int8 newRSSI );
-static void putBDAddrIntoAdvData( uint8 *bd_addr );
+static void updateRssiCB( int8 newRSSI );
+static void readBDAddrCB( uint8 *bd_addr );
 static uint8 isProximityAlertToggleNeeded( void );
 static void updateConnParamCB( uint16 connInterval, uint16 connSlaveLatency,uint16 connTimeout );
+#ifdef ENABLE_PTM
+static void llSetupPTMTestPort( void );
+#endif
 
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -297,8 +310,8 @@ static void updateConnParamCB( uint16 connInterval, uint16 connSlaveLatency,uint
 static gapRolesCBs_t keyFob_PeripheralCBs =
 {
   peripheralStateNotificationCB,  // Profile State Change Callbacks
-  updateRssiProximityAlert,   // When a valid RSSI is read from controller
-  putBDAddrIntoAdvData
+  updateRssiCB,                   // When a valid RSSI is read from controller
+  readBDAddrCB,
 };
 
 // GAP Role Callback for conn param updated
@@ -324,17 +337,42 @@ static sprintronKeyfobCBs_t keyFob_ProfileCBs =
  * PUBLIC FUNCTIONS
  */
 
+#ifdef ENABLE_PTM
  /*********************************************************************
- * @fn      putBDAddrIntoAdvData
+ * @fn      llSetupPTMTestPort
  *
- * @brief   Added by Sprintron
+ * @brief   Added by Sprintron: for PTM pins initialization.
  *
- * @param  none
+ * @param   none
  *
  * @return  Out_Of_Range_Status
  */
-static void putBDAddrIntoAdvData( uint8 *bd_addr )
+void llSetupPTMTestPort( void ) 
+{ 
+  // ready UART0, Alternative 1 for the application to monitor 
+  P0SEL &= (~BV(PTM) & ~BV(RDY));   // GPIO 
+  P0DIR &= ~BV(PTM);                // input; this is Tester's RTS 
+  P0DIR |= BV(RDY);                 // output; this is Tester's CTS 
+  P0 |= BV(RDY);                    // de-assert Tester's CTS 
+  P0INP &= ~BV(PTM);                // pull-up/pull-down depending on P2INP 
+  P2INP &= ~BV(PDUP0);              // pull-up 
+
+  return; 
+} 
+#endif
+
+ /*********************************************************************
+ * @fn      readBDAddrCB
+ *
+ * @brief   Added by Sprintron
+ *
+ * @param   none
+ *
+ * @return  Out_Of_Range_Status
+ */
+static void readBDAddrCB( uint8 *bd_addr )
 {
+  // write BD Addr into advertise data
   advertData[5] = bd_addr[0];
   advertData[6] = bd_addr[1];
   advertData[7] = bd_addr[2];
@@ -342,6 +380,15 @@ static void putBDAddrIntoAdvData( uint8 *bd_addr )
   advertData[9] = bd_addr[4];
   advertData[10] = bd_addr[5];
   GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+
+  // update BD Addr field in Man Sec characteristic
+  keyfobManSec[5] = bd_addr[0];
+  keyfobManSec[6] = bd_addr[1];
+  keyfobManSec[7] = bd_addr[2];
+  keyfobManSec[8] = bd_addr[3];
+  keyfobManSec[9] = bd_addr[4];
+  keyfobManSec[10] = bd_addr[5];
+  sprintronKeyfob_SetParameter( SPRINTRON_MAN_SEC, sizeof( keyfobManSec ), keyfobManSec );
 }
  
 /*********************************************************************
@@ -349,11 +396,10 @@ static void putBDAddrIntoAdvData( uint8 *bd_addr )
  *
  * @brief   Added by Sprintron
  *
- * @param  none
+ * @param   none
  *
  * @return  Out_Of_Range_Status
  */
-
 static bool isProximityAlertToggleNeeded()
 {
   uint8 new_status;
@@ -377,7 +423,7 @@ static bool isProximityAlertToggleNeeded()
 }
 
 /*********************************************************************
- * @fn      updateRssiProximityAlert
+ * @fn      updateRssiCB
  *
  * @brief   Added by Sprintron
  *              This function will be called when RSSI value is available every 1s. 
@@ -386,8 +432,7 @@ static bool isProximityAlertToggleNeeded()
  *
  * @return  none
  */
-
-static void updateRssiProximityAlert( int8 newRSSI )
+static void updateRssiCB( int8 newRSSI )
 {
   keyfobRssiValue = newRSSI;
   sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
@@ -440,143 +485,164 @@ static void updateConnParamCB( uint16 connInterval, uint16 connSlaveLatency,uint
  */
 void KeyFobApp_Init( uint8 task_id )
 {
-  keyfobapp_TaskID = task_id;
-    
-  // Setup the GAP
-  VOID GAP_SetParamValue( TGAP_CONN_PAUSE_PERIPHERAL, DEFAULT_CONN_PAUSE_PERIPHERAL );
-  // setup normal adv interval to default value
-  VOID GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
-  VOID GAP_SetParamValue( TGAP_CONN_ADV_INT_MAX, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
+#ifdef ENABLE_PTM
+  llSetupPTMTestPort(); 
 
-  // Setup the GAP Peripheral Role Profile
-  {
-#ifdef USE_WHITE_LIST_ADV 
-    // Start adv right after device is initialized.
-    uint8 initial_advertising_enable = TRUE;
-#else
-    // For the CC2540DK-MINI keyfob, device doesn't start advertising until button is pressed
-    uint8 initial_advertising_enable = FALSE;
-#endif
+  // check if Tester's RTS is asserted 
+  if ( TESTER_CONNECTED() ) 
+  { 
+    (void)osal_pwrmgr_task_state( task_id, PWRMGR_HOLD ); 
+    HCI_EXT_EnablePTMCmd(); 
+  } 
+  else 
+  { 
+#ifdef POWER_SAVING 
+    (void)osal_pwrmgr_task_state( task_id, PWRMGR_CONSERVE ); 
+#endif // POWER_SAVING
+#endif // ENABLE_PTM
 
-    // When in limited adv mode, use this variable to set adv periodical interval.
-    // when set to 0. adv won't restart periodically. To change adv last time, use 
-    // GAP_SetParamValue(TGAP_LIM_ADV_TIMEOUT, 180);	
-    uint16 gapRole_AdvertOffTime = 0;
-
-    uint8 enable_update_request = DEFAULT_ENABLE_UPDATE_REQUEST;
-    uint16 desired_min_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
-    uint16 desired_max_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
-    uint16 desired_slave_latency = SLAVE_LATENCY_DEFAULT_VALUE;
-    uint16 desired_conn_timeout = SUPERVISION_TIMEOUT_DEFAULT_VALUE;
-    uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
-
-#ifdef USE_WHITE_LIST_ADV 
-    uint8 snvStatus;
-	uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
-	
-	GAPRole_SetParameter(GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy);
-
-    // read previously connected device's BD Addr from NV
-    snvStatus = osal_snv_read( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
-                             B_ADDR_LEN,
-                             (uint8 *)connectedDeviceBDAddr );
-
-    // if read success, add it into white list.
-    // if fail, means device is never connected to a device. don't add white list. (connectedDeviceBDAddr remains as initialized value)
-    if (snvStatus == SUCCESS)
+    //Copy and Past the original init content here  
+    keyfobapp_TaskID = task_id;
+      
+    // Setup the GAP
+    VOID GAP_SetParamValue( TGAP_CONN_PAUSE_PERIPHERAL, DEFAULT_CONN_PAUSE_PERIPHERAL );
+    // setup normal adv interval to default value
+    VOID GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
+    VOID GAP_SetParamValue( TGAP_CONN_ADV_INT_MAX, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
+  
+    // Setup the GAP Peripheral Role Profile
     {
-      // add previously connected device into whitelist.
-      VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
-    }
+#ifdef USE_WHITE_LIST_ADV 
+      // Start adv right after device is initialized.
+      uint8 initial_advertising_enable = TRUE;
+#else
+      // For the CC2540DK-MINI keyfob, device doesn't start advertising until button is pressed
+      uint8 initial_advertising_enable = FALSE;
 #endif
-
-    // Set the GAP Role Parameters
-    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &initial_advertising_enable );
-
-    // this is for limited adv mode, but keep it here if later we switch to limited adv mode.
-    GAPRole_SetParameter( GAPROLE_ADVERT_OFF_TIME, sizeof( uint16 ), &gapRole_AdvertOffTime );
-
-    // read RSSI and update out_of_range_status attr & server_RSSI_value attr every 1 second
-    GAPRole_SetParameter( GAPROLE_RSSI_READ_RATE, sizeof( uint16 ), &desired_rssi_read_rate );
-
-    GAPRole_SetParameter( GAPROLE_SCAN_RSP_DATA, sizeof ( deviceName ), deviceName );
-
-    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
-
   
-    GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE, sizeof( uint8 ), &enable_update_request );
-    GAPRole_SetParameter( GAPROLE_MIN_CONN_INTERVAL, sizeof( uint16 ), &desired_min_interval );
-    GAPRole_SetParameter( GAPROLE_MAX_CONN_INTERVAL, sizeof( uint16 ), &desired_max_interval );
-    GAPRole_SetParameter( GAPROLE_SLAVE_LATENCY, sizeof( uint16 ), &desired_slave_latency );
-    GAPRole_SetParameter( GAPROLE_TIMEOUT_MULTIPLIER, sizeof( uint16 ), &desired_conn_timeout );
-  }
+      // When in limited adv mode, use this variable to set adv periodical interval.
+      // when set to 0. adv won't restart periodically. To change adv last time, use 
+      // GAP_SetParamValue(TGAP_LIM_ADV_TIMEOUT, 180);	
+      uint16 gapRole_AdvertOffTime = 0;
   
-  // register callback function that will be called when conn param is updated.
-  GAPRole_RegisterAppCBs( &keyFob_ParamUpdateCB );
+      uint8 enable_update_request = DEFAULT_ENABLE_UPDATE_REQUEST;
+      uint16 desired_min_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
+      uint16 desired_max_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
+      uint16 desired_slave_latency = SLAVE_LATENCY_DEFAULT_VALUE;
+      uint16 desired_conn_timeout = SUPERVISION_TIMEOUT_DEFAULT_VALUE;
+      uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
   
-  // Set the GAP Attributes
-  GGS_SetParameter( GGS_DEVICE_NAME_ATT, GAP_DEVICE_NAME_LEN, attDeviceName );
-
-  // Setup the GAP Bond Manager
-  {
-    uint8 pairMode = GAPBOND_PAIRING_MODE_WAIT_FOR_REQ;
-    uint8 mitm = TRUE;
-    uint8 ioCap = GAPBOND_IO_CAP_DISPLAY_ONLY;
-    uint8 bonding = TRUE;
+#ifdef USE_WHITE_LIST_ADV 
+      uint8 snvStatus;
+  	uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+  	
+  	GAPRole_SetParameter(GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy);
+  
+      // read previously connected device's BD Addr from NV
+      snvStatus = osal_snv_read( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
+                               B_ADDR_LEN,
+                               (uint8 *)connectedDeviceBDAddr );
+  
+      // if read success, add it into white list.
+      // if fail, means device is never connected to a device. don't add white list. (connectedDeviceBDAddr remains as initialized value)
+      if (snvStatus == SUCCESS)
+      {
+        // add previously connected device into whitelist.
+        VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
+      }
+#endif
+  
+      // Set the GAP Role Parameters
+      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &initial_advertising_enable );
+  
+      // this is for limited adv mode, but keep it here if later we switch to limited adv mode.
+      GAPRole_SetParameter( GAPROLE_ADVERT_OFF_TIME, sizeof( uint16 ), &gapRole_AdvertOffTime );
+  
+      // read RSSI and update out_of_range_status attr & server_RSSI_value attr every 1 second
+      GAPRole_SetParameter( GAPROLE_RSSI_READ_RATE, sizeof( uint16 ), &desired_rssi_read_rate );
+  
+      GAPRole_SetParameter( GAPROLE_SCAN_RSP_DATA, sizeof ( deviceName ), deviceName );
+  
+      GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+  
     
-    GAPBondMgr_SetParameter( GAPBOND_PAIRING_MODE, sizeof ( uint8 ), &pairMode );
-    GAPBondMgr_SetParameter( GAPBOND_MITM_PROTECTION, sizeof ( uint8 ), &mitm );
-    GAPBondMgr_SetParameter( GAPBOND_IO_CAPABILITIES, sizeof ( uint8 ), &ioCap );
-    GAPBondMgr_SetParameter( GAPBOND_BONDING_ENABLED, sizeof ( uint8 ), &bonding );
-  }
-
-  // Initialize GATT attributes
-  GGS_AddService( GATT_ALL_SERVICES );         // GAP
-  GATTServApp_AddService( GATT_ALL_SERVICES ); // GATT attributes
-  DevInfo_AddService();   // Device Information Service
-  sprintronKeyfob_AddService( GATT_ALL_SERVICES );  // Sprintron Keyfob Profile
-  ProxReporter_AddService(PP_TX_PWR_LEVEL_SERVICE); // Tx Power service
-  Batt_AddService( );     // Battery Service
-
-  // make sure buzzer is off
-  buzzerStop();
-
-  // makes sure LEDs are off
-  HalLedSet( (HAL_LED_1 | HAL_LED_2), HAL_LED_MODE_OFF );
-
-  // For keyfob board set GPIO pins into a power-optimized state
-  // Note that there is still some leakage current from the buzzer,
-  // accelerometer, LEDs, and buttons on the PCB.
-
-  P0SEL = 0; // Configure Port 0 as GPIO
-  P1SEL = 0x40; // Configure Port 1 as GPIO, except P1.6 for peripheral function for buzzer
-  P2SEL = 0; // Configure Port 2 as GPIO
-
-  P0DIR = 0xFC; // Port 0 pins P0.0 and P0.1 as input (buttons),
-                // all others (P0.2-P0.7) as output
-  P1DIR = 0xFF; // All port 1 pins (P1.0-P1.7) as output
-  P2DIR = 0x1F; // All port 1 pins (P2.0-P2.4) as output
-
-  P0 = 0x03; // All pins on port 0 to low except for P0.0 and P0.1 (buttons)
-  P1 = 0;   // All pins on port 1 to low
-  P2 = 0;   // All pins on port 2 to low
-
-
-  // initialize the ADC for battery reads
-  HalAdcInit();
-
-  // Register for all key events - This app will handle all key events
-  RegisterForKeys( keyfobapp_TaskID );
-
-#if defined ( DC_DC_P0_7 )
-
-  // Enable stack to toggle bypass control on TPS62730 (DC/DC converter)
-  HCI_EXT_MapPmIoPortCmd( HCI_EXT_PM_IO_PORT_P0, HCI_EXT_PM_IO_PORT_PIN7 );
-
-#endif // defined ( DC_DC_P0_7 )
+      GAPRole_SetParameter( GAPROLE_PARAM_UPDATE_ENABLE, sizeof( uint8 ), &enable_update_request );
+      GAPRole_SetParameter( GAPROLE_MIN_CONN_INTERVAL, sizeof( uint16 ), &desired_min_interval );
+      GAPRole_SetParameter( GAPROLE_MAX_CONN_INTERVAL, sizeof( uint16 ), &desired_max_interval );
+      GAPRole_SetParameter( GAPROLE_SLAVE_LATENCY, sizeof( uint16 ), &desired_slave_latency );
+      GAPRole_SetParameter( GAPROLE_TIMEOUT_MULTIPLIER, sizeof( uint16 ), &desired_conn_timeout );
+    }
+    
+    // register callback function that will be called when conn param is updated.
+    GAPRole_RegisterAppCBs( &keyFob_ParamUpdateCB );
+    
+    // Set the GAP Attributes
+    GGS_SetParameter( GGS_DEVICE_NAME_ATT, GAP_DEVICE_NAME_LEN, attDeviceName );
   
-  // Setup a delayed profile startup
-  osal_start_timerEx( keyfobapp_TaskID, KFD_START_DEVICE_EVT, STARTDELAY );
+    // Setup the GAP Bond Manager
+    {
+      uint8 pairMode = GAPBOND_PAIRING_MODE_WAIT_FOR_REQ;
+      uint8 mitm = TRUE;
+      uint8 ioCap = GAPBOND_IO_CAP_DISPLAY_ONLY;
+      uint8 bonding = TRUE;
+      
+      GAPBondMgr_SetParameter( GAPBOND_PAIRING_MODE, sizeof ( uint8 ), &pairMode );
+      GAPBondMgr_SetParameter( GAPBOND_MITM_PROTECTION, sizeof ( uint8 ), &mitm );
+      GAPBondMgr_SetParameter( GAPBOND_IO_CAPABILITIES, sizeof ( uint8 ), &ioCap );
+      GAPBondMgr_SetParameter( GAPBOND_BONDING_ENABLED, sizeof ( uint8 ), &bonding );
+    }
+  
+    // Initialize GATT attributes
+    GGS_AddService( GATT_ALL_SERVICES );         // GAP
+    GATTServApp_AddService( GATT_ALL_SERVICES ); // GATT attributes
+    DevInfo_AddService();   // Device Information Service
+    sprintronKeyfob_AddService( GATT_ALL_SERVICES );  // Sprintron Keyfob Profile
+    ProxReporter_AddService(PP_TX_PWR_LEVEL_SERVICE); // Tx Power service
+    Batt_AddService( );     // Battery Service
+  
+    // make sure buzzer is off
+    buzzerStop();
+  
+    // makes sure LEDs are off
+    HalLedSet( (HAL_LED_1 | HAL_LED_2), HAL_LED_MODE_OFF );
+  
+    // For keyfob board set GPIO pins into a power-optimized state
+    // Note that there is still some leakage current from the buzzer,
+    // accelerometer, LEDs, and buttons on the PCB.
+  
+    P0SEL = 0; // Configure Port 0 as GPIO
+    P1SEL = 0x40; // Configure Port 1 as GPIO, except P1.6 for peripheral function for buzzer
+    P2SEL = 0; // Configure Port 2 as GPIO
+  
+    P0DIR = 0xFC; // Port 0 pins P0.0 and P0.1 as input (buttons),
+                  // all others (P0.2-P0.7) as output
+    P1DIR = 0xFF; // All port 1 pins (P1.0-P1.7) as output
+    P2DIR = 0x1F; // All port 1 pins (P2.0-P2.4) as output
+  
+    P0 = 0x03; // All pins on port 0 to low except for P0.0 and P0.1 (buttons)
+    P1 = 0;   // All pins on port 1 to low
+    P2 = 0;   // All pins on port 2 to low
+  
+  
+    // initialize the ADC for battery reads
+    HalAdcInit();
+  
+    // Register for all key events - This app will handle all key events
+    RegisterForKeys( keyfobapp_TaskID );
+  
+#if defined ( DC_DC_P0_7 )
+  
+    // Enable stack to toggle bypass control on TPS62730 (DC/DC converter)
+    HCI_EXT_MapPmIoPortCmd( HCI_EXT_PM_IO_PORT_P0, HCI_EXT_PM_IO_PORT_PIN7 );
+  
+#endif // defined ( DC_DC_P0_7 )
+    
+    // Setup a delayed profile startup
+    osal_start_timerEx( keyfobapp_TaskID, KFD_START_DEVICE_EVT, STARTDELAY );
+    
+#ifdef ENABLE_PTM
+  }
+#endif
 }
 
 /*********************************************************************
@@ -626,7 +692,9 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
     // Request to read BD_ADDR. This need to be done after callback is setup.
     HCI_ReadBDADDRCmd();
-    //Set the proximity attribute values to default
+    
+    //Set all service characteristic values to default
+    sprintronKeyfob_SetParameter( SPRINTRON_MAN_SEC,  sizeof ( keyfobManSec ), &keyfobManSec );
     sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_CONFIG,  sizeof ( int8 ), &keyfobProximityConfig );
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
@@ -1153,7 +1221,12 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
 {
   switch( attrParamID )
   {
-
+  case SPRINTRON_MAN_SEC:
+    { 
+      sprintronKeyfob_GetParameter( SPRINTRON_MAN_SEC, &keyfobManSec );
+    }
+    break;
+    
   case SPRINTRON_CLIENT_TX_POWER:
     {
       sprintronKeyfob_GetParameter( SPRINTRON_CLIENT_TX_POWER, &keyfobClientTxPwr );

@@ -54,14 +54,19 @@ extern "C"
  */
 
 // Profile Parameters - used by set parameter & get parameter functions
-#define SPRINTRON_RSSI_VALUE                            0
-#define SPRINTRON_PROXIMITY_CONFIG                      1
-#define SPRINTRON_PROXIMITY_ALERT                       2
-#define SPRINTRON_CLIENT_TX_POWER                       3
-#define SPRINTRON_AUDIO_VISUAL_ALERT                    4
-#define SPRINTRON_DEVICE_CONFIG_PARAMETERS              5 //SPRINTRON_CONNECTION_PARAMETERS                 5
+#define SPRINTRON_MAN_SEC                               0
+#define SPRINTRON_RSSI_VALUE                            1
+#define SPRINTRON_PROXIMITY_CONFIG                      2
+#define SPRINTRON_PROXIMITY_ALERT                       3
+#define SPRINTRON_CLIENT_TX_POWER                       4
+#define SPRINTRON_AUDIO_VISUAL_ALERT                    5
+#define SPRINTRON_DEVICE_CONFIG_PARAMETERS              6
 
 // Sprintron Keyfob character value define
+#define MAN_SEC_FLAG_UNKNOWN                            0x0
+#define MAN_SEC_FLAG_VALID                              0x1
+#define MAN_SEC_FLAG_INVALID                            0x2
+
 #define RSSI_VALUE_DEFAULT_VALUE                        0xFF
 
 #define PROXIMITY_CONFIG_DEFAULT_VALUE                  0x0
@@ -90,6 +95,7 @@ extern "C"
 #define AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE           200
 
 // Sprintron Service UUID
+#define SPRINTRON_MAN_SEC_SERVICE_UUID                  0xFFA0
 #define SPRINTRON_RSSI_REPORT_SERVICE_UUID              0xFFA1
 #define SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID          0xFFA2
 #define SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID          0xFFA4
@@ -97,6 +103,7 @@ extern "C"
 #define SPRINTRON_DEVICE_CONFIG_SERVICE_UUID            0xFFA6
 
 // Sprintron Char UUID
+#define SPRINTRON_MAN_SEC_UUID                          0xFFC0
 #define SPRINTRON_RSSI_VALUE_UUID                       0xFFC1
 #define SPRINTRON_PROXIMITY_ALERT_UUID                  0xFFC2
 #define SPRINTRON_PROXIMITY_CONFIG_UUID                 0xFFC3
@@ -105,11 +112,12 @@ extern "C"
 #define SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID         0xFFC6
 
 // Sprintron Keyfob Profile Services bit fields
-#define SPRINTRON_RSSI_REPORT_SERVICE                   0x00000001
-#define SPRINTRON_PROXIMITY_ALERT_SERVICE               0x00000002
-#define SPRINTRON_CLIENT_TX_POWER_SERVICE               0x00000004
-#define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE            0x00000008
-#define SPRINTRON_DEVICE_CONFIG_SERVICE                 0x00000010
+#define SPRINTRON_RSSI_MAN_SEC_SERVICE                  0x00000001
+#define SPRINTRON_RSSI_REPORT_SERVICE                   0x00000002
+#define SPRINTRON_PROXIMITY_ALERT_SERVICE               0x00000004
+#define SPRINTRON_CLIENT_TX_POWER_SERVICE               0x00000008
+#define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE            0x00000010
+#define SPRINTRON_DEVICE_CONFIG_SERVICE                 0x00000020
 
 // Device config parameters sequence
 #define CONFIG_IDX_CONNECTION_INTERVAL                  0
