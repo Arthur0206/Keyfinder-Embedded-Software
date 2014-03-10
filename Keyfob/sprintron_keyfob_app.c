@@ -163,6 +163,8 @@
 #define P0ICON                                0 
 #define TESTER_CONNECTED()                    (P0_4==0)?TRUE:FALSE
 
+// #define BYPASS_USING_WHITELIST_FOR_DEBUG
+
 /*********************************************************************
  * TYPEDEFS
  */
@@ -534,9 +536,13 @@ void KeyFobApp_Init( uint8 task_id )
   
 #ifdef USE_WHITE_LIST_ADV 
       uint8 snvStatus;
-  	uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
+      uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+#else
+      uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
+#endif
   	
-  	GAPRole_SetParameter(GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy);
+      GAPRole_SetParameter(GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy);
   
       // read previously connected device's BD Addr from NV
       snvStatus = osal_snv_read( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
@@ -804,7 +810,11 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     }
     else // if in connection. theoretically won't happen because we disable this event if device get connected under fast adv mode.
     {
+#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
       uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+#else
+      uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
+#endif
 
       // set adv filter policy to only accept devices in whitelist
       GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
@@ -818,7 +828,12 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
   if (events & KFD_WHITELIST_START_EVT)
   {
+#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
     uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+#else
+    uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
+#endif
+
     uint8 turnOnAdv = TRUE;
     
     // set adv filter policy to only accept devices in whitelist
@@ -1078,7 +1093,7 @@ void keyfobapp_StopBuzzerAlert( void )
  *
  * @brief   Notification from the profile of a state change.
  *
- * @param   newState - new state
+ * @param   newState - new state 
  *
  * @return  none
  */
@@ -1124,7 +1139,11 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         // if keyfob is connected under fast adv mode (after button is pressed once)
         if (is_in_fast_adv_mode == 1)
         {
+#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
 		  uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
+#else
+          uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
+#endif
 		
 		  // set adv filter policy to only accept devices in whitelist
 		  GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
