@@ -819,7 +819,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
 		  if ( !osal_memcmp( (void*)pValue, (void*)pCurValue, 6) )
 		  {
 			GAPRole_SendUpdateParam( ((uint16*)pValue)[CONFIG_IDX_CONNECTION_INTERVAL], 
-									  ((uint16*)pValue)[CONFIG_IDX_CONNECTION_INTERVAL],
+									  ((uint16*)pValue)[CONFIG_IDX_CONNECTION_INTERVAL] + CONNECTION_INTERVAL_MIN_MAX_DIFFERENCE,
 									  ((uint16*)pValue)[CONFIG_IDX_SLAVE_LATENCY], 
 									  ((uint16*)pValue)[CONFIG_IDX_SUPERVISION_TIMEOUT],
 									  GAPROLE_NO_ACTION );

@@ -87,6 +87,8 @@ extern "C"
 
 // unit is 1.25ms => 400 = 500ms
 #define CONNECTION_INTERVAL_DEFAULT_VALUE               400
+// This is for iPhone
+#define CONNECTION_INTERVAL_MIN_MAX_DIFFERENCE          35
 // unit is 10ms => 500 = 5s
 #define SUPERVISION_TIMEOUT_DEFAULT_VALUE               500
 #define SLAVE_LATENCY_DEFAULT_VALUE                     0

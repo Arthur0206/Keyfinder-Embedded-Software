@@ -529,7 +529,7 @@ void KeyFobApp_Init( uint8 task_id )
   
       uint8 enable_update_request = DEFAULT_ENABLE_UPDATE_REQUEST;
       uint16 desired_min_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
-      uint16 desired_max_interval = CONNECTION_INTERVAL_DEFAULT_VALUE;
+      uint16 desired_max_interval = CONNECTION_INTERVAL_DEFAULT_VALUE + CONNECTION_INTERVAL_MIN_MAX_DIFFERENCE;
       uint16 desired_slave_latency = SLAVE_LATENCY_DEFAULT_VALUE;
       uint16 desired_conn_timeout = SUPERVISION_TIMEOUT_DEFAULT_VALUE;
       uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
