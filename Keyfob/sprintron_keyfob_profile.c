@@ -176,7 +176,7 @@ static uint8 sprintronManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  //
                                      MAN_SEC_FLAG_UNKNOWN,                    // Flag
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };    // BD Addr
 
-static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY | GATT_PROP_INDICATE;
+static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_INDICATE; // | GATT_PROP_NOTIFY
 static int8 sprintronRssiValue = RSSI_VALUE_DEFAULT_VALUE;
 static gattCharCfg_t sprintronRssiValueConfig[GATT_MAX_NUM_CONN];
 
@@ -831,6 +831,10 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
 		  {
 			GAP_SetParamValue( TGAP_CONN_ADV_INT_MIN, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
 			GAP_SetParamValue( TGAP_CONN_ADV_INT_MAX, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+			GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MIN, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+			GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MAX, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+			GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MIN, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
+			GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MAX, ((uint16*)pValue)[CONFIG_IDX_NORMAL_ADV_INTERVAL] );
 		  }
 		  
 		  // do not really update connection parameters until the current connection parameters is really changed.
