@@ -163,7 +163,7 @@
 #define P0ICON                                0 
 #define TESTER_CONNECTED()                    (P0_4==0)?TRUE:FALSE
 
-// #define BYPASS_USING_WHITELIST_FOR_DEBUG
+#define BYPASS_USING_WHITELIST_FOR_DEBUG
 
 /*********************************************************************
  * TYPEDEFS
