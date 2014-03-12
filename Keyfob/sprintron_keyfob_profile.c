@@ -845,8 +845,17 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         break;
         
       case GATT_CLIENT_CHAR_CFG_UUID:
-        status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
-                                                 offset, /*GATT_CLIENT_CFG_NOTIFY | */ GATT_CLIENT_CFG_INDICATE );
+        if ( pAttr->handle == sprintronRssiReportAttrTbl[3].handle )
+        {
+          // RSSI needs to use indication due to TI BLE stack's limitation.
+          status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
+                                                   offset, GATT_CLIENT_CFG_INDICATE );
+        }
+        else
+        {
+          status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
+                                                 offset, GATT_CLIENT_CFG_NOTIFY );
+        }
         break;
         
       default:
