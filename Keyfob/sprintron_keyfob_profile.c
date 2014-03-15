@@ -521,7 +521,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
 	  break;
 	  
     case SPRINTRON_RSSI_VALUE:
-      if ( len == sizeof ( int8 ) ) 
+      if ( len == sizeof ( sprintronRssiValue ) ) 
       {
         sprintronRssiValue = *((int8*)value);
 		
@@ -537,7 +537,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
 	case SPRINTRON_PROXIMITY_CONFIG:
-      if ( len == sizeof ( int8 ) ) 
+      if ( len == sizeof ( sprintronProximityConfig ) ) 
       {
         sprintronProximityConfig = *((int8*)value);
       }
@@ -548,7 +548,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
     case SPRINTRON_PROXIMITY_ALERT:
-      if ( len == sizeof ( uint8 ) )
+      if ( len == sizeof ( sprintronProximityAlert ) )
       {
         sprintronProximityAlert = *((uint8*)value);
         
@@ -564,7 +564,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
     case SPRINTRON_CLIENT_TX_POWER:
-      if ( len == sizeof ( int8 ) ) 
+      if ( len == sizeof ( sprintronClientTxPower ) ) 
       {
         sprintronClientTxPower = *((int8*)value);
       }
@@ -575,7 +575,7 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
 	case SPRINTRON_AUDIO_VISUAL_ALERT:
-      if ( len == sizeof ( uint8 ) )
+      if ( len == sizeof ( sprintronAudioVisualAlert ) )
       {
         sprintronAudioVisualAlert = *((uint32*)value);
       }
@@ -693,10 +693,10 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
         osal_memcpy(pValue, pAttr->pValue, *pLen);
         break;
         
-      case SPRINTRON_RSSI_VALUE_UUID:
-      case SPRINTRON_PROXIMITY_CONFIG_UUID:
-      case SPRINTRON_PROXIMITY_ALERT_UUID:
-      case SPRINTRON_CLIENT_TX_POWER_UUID:
+      case SPRINTRON_RSSI_VALUE_UUID: //sprintronRssiValue
+      case SPRINTRON_PROXIMITY_CONFIG_UUID: //sprintronProximityConfig
+      case SPRINTRON_PROXIMITY_ALERT_UUID: //sprintronProximityAlert
+      case SPRINTRON_CLIENT_TX_POWER_UUID: //sprintronClientTxPower
         *pLen = 1;
         pValue[0] = *pAttr->pValue;
         break;
@@ -766,7 +766,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         break;
 		
       case SPRINTRON_CLIENT_TX_POWER_UUID:
-        if (len > 1)
+        if (len > sizeof(sprintronClientTxPower) )
         {
           status = ATT_ERR_INVALID_VALUE_SIZE;
         }
@@ -780,7 +780,7 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         break;
 
       case SPRINTRON_PROXIMITY_CONFIG_UUID:
-        if (len > 1)
+        if (len > sizeof(sprintronProximityConfig) )
         {
           status = ATT_ERR_INVALID_VALUE_SIZE;
         }
