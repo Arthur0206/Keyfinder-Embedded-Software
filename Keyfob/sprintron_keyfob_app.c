@@ -1313,7 +1313,10 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
         keyfobapp_PerformBuzzerAlert();
         
         buzzer_beep_count = 0;
-        
+
+        // stop evt for buzzer alert if it exists.
+        osal_stop_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT );
+
         // start evt for buzzer alert time expired.
         osal_start_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT, (uint32)((uint32)keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME]*(uint32)1000) );
       }
@@ -1328,6 +1331,9 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
       {
         // Turn on the LED alert.
         HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+
+        // stop evt for led alert if it exists.
+        osal_stop_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT );
         
         // start evt for led alert time expired.
         osal_start_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT, (uint32)((uint32)keyfobDeviceConfigParameters[CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME]*(uint32)1000) );
