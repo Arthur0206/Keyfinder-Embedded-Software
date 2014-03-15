@@ -92,8 +92,8 @@ extern "C"
 // unit is 10ms => 500 = 5s
 #define SUPERVISION_TIMEOUT_DEFAULT_VALUE               500
 #define SLAVE_LATENCY_DEFAULT_VALUE                     0
-// Normal advertising interval in 625us units.  625*32 = 20ms (recommended)
-#define NORMAL_ADV_INTERVAL_DEFAULT_VALUE               32
+// Normal advertising interval in 625us units.  625*320 = 200ms (recommended)
+#define NORMAL_ADV_INTERVAL_DEFAULT_VALUE               320
 #define AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE           200
 
 // Sprintron Service UUID
