@@ -1201,6 +1201,26 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 
 		  osal_stop_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT );
         }
+
+        sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
+
+        // turn off the buzzer if it is on.
+        if( ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
+        {
+          osal_stop_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT );
+          ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+          keyfobapp_StopBuzzerAlert();
+        }
+
+        // turn off the LED if it is on.
+        if( ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_ON)
+        {
+          osal_stop_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT );
+          ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] = LED_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+          HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+        }
       }
       break;
 
@@ -1216,6 +1236,26 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 		  HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
 
 		  osal_stop_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT );
+        }
+
+        sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
+
+        // turn off the buzzer if it is on.
+        if( ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] != BUZZER_ALERT_OFF)
+        {
+          osal_stop_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT );
+          ((uint8 *)&keyfobAudioVisualAlert)[BUZZER_ALERT_BYTE_ORDER] = BUZZER_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+          keyfobapp_StopBuzzerAlert();
+        }
+
+        // turn off the LED if it is on.
+        if( ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_ON)
+        {
+          osal_stop_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT );
+          ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] = LED_ALERT_OFF;
+          sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+          HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
         }
       }
       break;
@@ -1280,6 +1320,7 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
       else
       {
         // if buzzer alert config param is OFF, stop buzzer alert
+        osal_stop_timerEx( keyfobapp_TaskID, KFD_BUZZER_ALERT_TIME_EXPIRED_EVT );
         keyfobapp_StopBuzzerAlert();
       }
       
@@ -1294,6 +1335,7 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
       else
       {
         // Turn off the LED alert.
+        osal_stop_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT );
         HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
       }
     }
