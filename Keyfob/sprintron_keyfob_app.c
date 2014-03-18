@@ -498,10 +498,11 @@ void KeyFobApp_Init( uint8 task_id )
   } 
   else 
   { 
+#endif // ENABLE_PTM
+
 #ifdef POWER_SAVING 
     (void)osal_pwrmgr_task_state( task_id, PWRMGR_CONSERVE ); 
 #endif // POWER_SAVING
-#endif // ENABLE_PTM
 
     //Copy and Past the original init content here  
     keyfobapp_TaskID = task_id;
