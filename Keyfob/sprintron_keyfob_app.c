@@ -163,8 +163,6 @@
 #define P0ICON                                0 
 #define TESTER_CONNECTED()                    (P0_4==0)?TRUE:FALSE
 
-#define BYPASS_USING_WHITELIST_FOR_DEBUG
-
 /*********************************************************************
  * TYPEDEFS
  */
@@ -206,11 +204,6 @@ static uint16 keyfobDeviceConfigParameters[5] = { // connection parameters
 	                                              // av alert lasting time
 	                                              AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE };
 
-
-#ifdef USE_WHITE_LIST_ADV
-// set initialized value to a random addr, so we can recognize when it is connected at the first time after system boot up.
-uint8 connectedDeviceBDAddr[B_ADDR_LEN] = {0x13,0x24,0x35,0x46,0x57,0x68};
-#endif
 
 // GAP - SCAN RSP data (max size = 31 bytes)
 static uint8 deviceName[] =
@@ -276,16 +269,6 @@ static uint8 attDeviceName[GAP_DEVICE_NAME_LEN] = "Sprintron Keyfob";
 // Buzzer state
 static uint8 buzzer_state = BUZZER_OFF;
 static uint8 buzzer_beep_count = 0;
-
-// state that indicate if the device is in fast adv mode.
-// will be set to true when user press the button once
-// will be set to false when 1. device get connected under fast adv mode, 2. when kefyob reaches fast adv time
-static uint8 is_in_fast_adv_mode = 0;
-
-// state that indicate if the device is waiting for accepting connection.
-// will be set to true when device get connected under fast adv mode.
-// will be set to false if 1. user press the button when user is waiting for accepting connection 2. when the wait accept conn time has been reached.
-static uint8 is_waiting_for_accept_conn = 0;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -520,13 +503,8 @@ void KeyFobApp_Init( uint8 task_id )
   
     // Setup the GAP Peripheral Role Profile
     {
-#ifdef USE_WHITE_LIST_ADV 
       // Start adv right after device is initialized.
       uint8 initial_advertising_enable = TRUE;
-#else
-      // For the CC2540DK-MINI keyfob, device doesn't start advertising until button is pressed
-      uint8 initial_advertising_enable = FALSE;
-#endif
   
       // When in limited adv mode, use this variable to set adv periodical interval.
       // when set to 0. adv won't restart periodically. To change adv last time, use 
@@ -539,30 +517,9 @@ void KeyFobApp_Init( uint8 task_id )
       uint16 desired_slave_latency = SLAVE_LATENCY_DEFAULT_VALUE;
       uint16 desired_conn_timeout = SUPERVISION_TIMEOUT_DEFAULT_VALUE;
       uint16 desired_rssi_read_rate = DEFAULT_DESIRED_RSSI_READ_RATE;
-  
-#ifdef USE_WHITE_LIST_ADV 
-      uint8 snvStatus;
-#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
-      uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
-#else
       uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
-#endif
   	
       GAPRole_SetParameter(GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy);
-  
-      // read previously connected device's BD Addr from NV
-      snvStatus = osal_snv_read( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
-                               B_ADDR_LEN,
-                               (uint8 *)connectedDeviceBDAddr );
-  
-      // if read success, add it into white list.
-      // if fail, means device is never connected to a device. don't add white list. (connectedDeviceBDAddr remains as initialized value)
-      if (snvStatus == SUCCESS)
-      {
-        // add previously connected device into whitelist.
-        VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
-      }
-#endif
   
       // Set the GAP Role Parameters
       GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &initial_advertising_enable );
@@ -783,73 +740,6 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   }
 #endif
 
-#ifdef USE_WHITE_LIST_ADV 
-  if (events & KFD_NON_WHITELIST_START_EVT)
-  {
-    uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
-    uint8 turnOnAdv = TRUE;
-
-    // set adv filter policy to accept connection and scan request from all devices
-    GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
-
-    // turn on adv
-    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
-			
-	// Visual feedback that we are advertising to all devices (not using whitelist).
-	HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
-
-    // set a 30s timer for stopping the non-whitelist adv state.
-    osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT, FAST_ADV_TIME );
-  }
-
-  if (events & KFD_NON_WHITELIST_STOP_EVT)
-  {
-    // if not in connection, then adv should be on at the time
-    if ( gapProfileState != GAPROLE_CONNECTED ) 
-    {
-      // turn off adv first
-      uint8 turnOnAdv = FALSE;
-      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv ); 
-      
-      // turn on adv with a delay. if no delay it won't work for some reasons
-      osal_start_timerEx( keyfobapp_TaskID, KFD_WHITELIST_START_EVT, 500 );
-    }
-    else // if in connection. theoretically won't happen because we disable this event if device get connected under fast adv mode.
-    {
-#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
-      uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
-#else
-      uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
-#endif
-
-      // set adv filter policy to only accept devices in whitelist
-      GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
-    }
-
-	is_in_fast_adv_mode = 0;
-
-    // Turn off the LED that shows we're advertising without whitelist. 
-    HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
-  }
-
-  if (events & KFD_WHITELIST_START_EVT)
-  {
-#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
-    uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
-#else
-    uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
-#endif
-
-    uint8 turnOnAdv = TRUE;
-    
-    // set adv filter policy to only accept devices in whitelist
-    GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
-
-    // turn on adv
-    GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
-  }
-#endif
-
   // this event will be triggered every connection interval
   if (events & KFD_CONNECTION_INTERVAL_EVT)
   {
@@ -861,21 +751,6 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 
 	// call hci command to read rssi value
 	VOID HCI_ReadRssiCmd( conn_handle );
-  }
-
-  // this event will be triggered if the button is not pressed within a preiod of time after connection is establised in fast adv mode.
-  if (events & KFD_WAIT_ACCEPTING_CONN_FAIL_EVT)
-  {
-    // theoretically it must be true here
-    if (is_waiting_for_accept_conn == 1)
-    {
-      // terminate the connection
-      GAPRole_TerminateConnection();
- 
-      is_waiting_for_accept_conn = 0;
-
-      HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
-    }
   }
 
   // turn off buzzer alert when buzzer alert time expired.
@@ -947,81 +822,7 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 
   if ( keys & HAL_KEY_SW_2 )
   {
-#ifdef USE_WHITE_LIST_ADV
-    // if device is not in a connection and currently not in fast adv mode, pression the right key should change adv police to not use whitelist.
-    if ( gapProfileState != GAPROLE_CONNECTED && is_in_fast_adv_mode == 0 )
-    {
-      uint8 turnOnAdv = FALSE;
-
-	  // note that we've entered fast adv mode. if set here, can avoid the issue of mutiple button press in a short time.
-	  is_in_fast_adv_mode = 1;
-
-      // turn off adv first
-      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof(uint8), &turnOnAdv );
-
-      // turn on adv with a delay. if no delay it won't work for some reasons
-      osal_start_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_START_EVT, 500 );
-    } 
-    // put connected device's BD Addr into white list
-    else if ( gapProfileState == GAPROLE_CONNECTED && is_waiting_for_accept_conn == 1 )
-    {
-      uint8 default_connectedDeviceBDAddr[B_ADDR_LEN] = {0x13,0x24,0x35,0x46,0x57,0x68};
-      uint8 newly_connectedDeviceBDAddr[B_ADDR_LEN];
-
-      GAPRole_GetParameter( GAPROLE_CONN_BD_ADDR, newly_connectedDeviceBDAddr );
-		
-      // save newly connected device's BD Addr into NV ram and white list, if any of the following is true:
-      // 1. the keyfob is connected at the 1st time (ie. connectedDeviceBDAddr == {0x13,0x24,0x35,0x46,0x57,0x68})
-      // 2. newly connected device's BD addr is different from previously connected device's BD addr.
-      // Corner case: if the previously connected device really has BD Addr {0x13,0x24,0x35,0x46,0x57,0x68}, we might store the same value into 
-      // NV ram everytime when device is reconnected, which will consume more power.
-      if ( osal_memcmp( (void*)default_connectedDeviceBDAddr, (void*)connectedDeviceBDAddr, B_ADDR_LEN) ||
-          !osal_memcmp( (void*)newly_connectedDeviceBDAddr, (void*)connectedDeviceBDAddr, B_ADDR_LEN) )
-      {
-        // update previously connected device's BD Addr.
-        osal_memcpy( (void*)connectedDeviceBDAddr, (void*)newly_connectedDeviceBDAddr, B_ADDR_LEN );
-					
-        // store newly connected device into NV ram.
-        VOID osal_snv_write( SPRINTRON_KEYFOB_NV_ITEM_WHITELIST_DEVICE_ID,
-                             B_ADDR_LEN,
-                             (uint8 *)connectedDeviceBDAddr );   
-					
-        // add newly connected device into white list.
-        VOID HCI_LE_ClearWhiteListCmd();
-        VOID HCI_LE_AddWhiteListCmd( HCI_PUBLIC_DEVICE_ADDRESS, connectedDeviceBDAddr );
-      }
-
-      is_waiting_for_accept_conn = 0;
-
-      HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
-
-      osal_stop_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT );
-    }
-#else //USE_WHITE_LIST_ADV
-    // if device is not in a connection, pressing the right key should toggle
-    // advertising on and off
-    if( gapProfileState != GAPROLE_CONNECTED )
-    {
-      uint8 current_adv_enabled_status;
-      uint8 new_adv_enabled_status;
-
-      //Find the current GAP advertisement status
-      GAPRole_GetParameter( GAPROLE_ADVERT_ENABLED, &current_adv_enabled_status );
-
-      if( current_adv_enabled_status == FALSE )
-      {
-        new_adv_enabled_status = TRUE;
-      }
-      else
-      {
-        new_adv_enabled_status = FALSE;
-      }
-
-      //change the GAP advertisement status to opposite of current status
-      GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &new_adv_enabled_status );
-    }
-#endif //USE_WHITE_LIST_ADV
-
+    // Add Code to allow bonding.
   }
 
 }
@@ -1142,35 +943,6 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       {
         GAPRole_GetParameter( GAPROLE_CONNHANDLE, &connHandle );
 
-        // if keyfob is connected under fast adv mode (after button is pressed once)
-        if (is_in_fast_adv_mode == 1)
-        {
-#if !defined(BYPASS_USING_WHITELIST_FOR_DEBUG)
-		  uint8 adv_filter_policy = GAP_FILTER_POLICY_WHITE;
-#else
-          uint8 adv_filter_policy = GAP_FILTER_POLICY_ALL;
-#endif
-		
-		  // set adv filter policy to only accept devices in whitelist
-		  GAPRole_SetParameter( GAPROLE_ADV_FILTER_POLICY, sizeof( uint8 ), &adv_filter_policy );
-		
-		  // Turn off the LED2 that shows we're advertising without whitelist. 
-		  HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
-		  
-		  is_in_fast_adv_mode = 0;
-
-          // Turn on the LED1 to show that keyfob is waiting for user to accept connection.
-		  HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
-		  
-          is_waiting_for_accept_conn = 1;
-
-          // setup a event to terminate connection if user doesn't press button within a period time
-          osal_start_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT, WAIT_ACCEPTING_CONN_TIME );
-          
-          // stop the 30s fast adv stop event, since fast adv has been disabled by this connected event.
-          osal_stop_timerEx( keyfobapp_TaskID, KFD_NON_WHITELIST_STOP_EVT );
-		}
-
         #if defined ( PLUS_BROADCASTER )
           osal_start_timerEx( keyfobapp_TaskID, KFD_ADV_IN_CONNECTION_EVT, ADV_IN_CONN_WAIT );
         #endif
@@ -1192,16 +964,6 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       {
         // then the link was terminated intentionally by the slave or master,
         // or advertising timed out
-
-        // if disconnected when waiting for accpeting connection, stop the accept conn fail event
-        if (is_waiting_for_accept_conn == 1)
-        {
-		  is_waiting_for_accept_conn = 0;
-		  
-		  HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
-
-		  osal_stop_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT );
-        }
 
         sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
 
@@ -1228,16 +990,6 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
     case GAPROLE_WAITING_AFTER_TIMEOUT:
       {
         // the link was dropped due to supervision timeout
-        
-        // if disconnected when waiting for accpeting connection, stop the accept conn fail event
-        if (is_waiting_for_accept_conn == 1)
-        {
-		  is_waiting_for_accept_conn = 0;
-		  
-		  HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
-
-		  osal_stop_timerEx( keyfobapp_TaskID, KFD_WAIT_ACCEPTING_CONN_FAIL_EVT );
-        }
 
         sprintronKeyfob_GetParameter( SPRINTRON_AUDIO_VISUAL_ALERT, &keyfobAudioVisualAlert );
 
