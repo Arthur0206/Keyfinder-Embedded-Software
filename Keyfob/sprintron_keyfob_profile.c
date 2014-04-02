@@ -220,7 +220,7 @@ static gattAttribute_t sprintronManSecAttrTbl[] =
       // Man Sec
       { 
         { ATT_BT_UUID_SIZE, sprintronManSecUUID},
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE /* | GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE*/, 
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_AUTHEN_READ | GATT_PERMIT_AUTHEN_WRITE /* | GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE*/, 
         0, 
         (uint8 *)&sprintronManSec
       },
