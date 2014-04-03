@@ -70,6 +70,18 @@ extern "C"
 #define KFD_BUZZER_ALERT_TIME_EXPIRED_EVT                 0x0400
 #define KFD_LED_ALERT_TIME_EXPIRED_EVT                    0x0800
 #define KFD_BOND_NOT_COMPLETE_IN_TIME_EVT                 0x1000
+#define KFD_LONG_PRESS_COMPLETE_EVT                       0x2000
+#define KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT          0x4000
+
+// Key press event type: pressed or released
+#define KEY_IS_PRESSED                                    0x0
+#define KEY_IS_RELEASED                                   0x1
+
+// States of key press state machine
+#define NOT_PRESSED                                       0x0
+#define PRESSED_COUNTING                                  0x1
+#define SHORT_PRESS_ACCHIEVED                             0x2
+#define LONG_PRESS_ACCHIEVED                              0x3
 
 // Key Fob NV Item ID
 // According to osal api document, application can use item id range from 0x80~0xfe, we choose something in between.
