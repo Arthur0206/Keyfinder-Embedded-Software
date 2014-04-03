@@ -899,7 +899,9 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
     {
       osal_stop_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT);
 
-      // notify the user that the keyfob is bonded by blinking LED1.        
+      // notify the user that the keyfob is bonded by blinking LED1.      
+      (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
+      
       HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
 
       osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_SHORT_PRESS_NOTIFY_TIME);
