@@ -163,6 +163,18 @@
 #define P0ICON                                0 
 #define TESTER_CONNECTED()                    (P0_4==0)?TRUE:FALSE
 
+// keyfob will allow bonding for this period of time after button is pressed.
+#define KEYFOB_ALLOW_BOND_PERIOD              15000
+
+// keyfob will wait for pin code for this period of time after pin code request is sent to the remote device.
+#define KEYFOB_WAIT_FOR_PIN_PERIOD            15000
+
+// period of time for consistant red LED to notify bond failed
+#define KEYFOB_BOND_FAIL_LED_NOTIFY_TIME      2000
+
+// period of time for consistant green LED to notify bond success
+#define KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME   2000
+
 /*********************************************************************
  * TYPEDEFS
  */
@@ -269,6 +281,12 @@ static uint8 attDeviceName[GAP_DEVICE_NAME_LEN] = "Sprintron Keyfob";
 // Buzzer state
 static uint8 buzzer_state = BUZZER_OFF;
 static uint8 buzzer_beep_count = 0;
+
+// If keyfob has been bonded with an iPhone
+int bonded = FALSE;
+
+// If button is pressed, and timer has not expired, then keyfob allow bonding.
+int allow_bond = FALSE;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -775,6 +793,25 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     }
   }
 
+  // bond and pin code exchange is not succesfull within defined period. Drop connection and disallow bond.
+  if (events & KFD_BOND_NOT_COMPLETE_IN_TIME_EVT)
+  {
+    uint16 conn_handle;
+
+    allow_bond = FALSE;
+
+    GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+
+    HCI_EXT_DisconnectImmedCmd( conn_handle );
+
+    // turn off LEDs
+    HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
+    HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+
+    // consistant red LED for 2s
+    HalLedBlink(HAL_LED_2, 1, HAL_LED_DEFAULT_DUTY_CYCLE, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
+  }
+  
   // Discard unknown events
   return 0;
 }
@@ -822,7 +859,17 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 
   if ( keys & HAL_KEY_SW_2 )
   {
-    // Add Code to allow bonding.
+    if (bonded == TRUE) {
+      // already bonded. add code to consistant blink green LED for 1s to notify user.
+    } else {
+      allow_bond = TRUE;
+
+      // blink red LED to notify user that keyfob is waiting for bonding.
+      HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+
+      // set up a 15s timer
+      osal_start_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, KEYFOB_ALLOW_BOND_PERIOD);
+    }
   }
 
 }
