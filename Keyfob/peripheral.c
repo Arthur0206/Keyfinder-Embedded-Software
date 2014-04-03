@@ -52,6 +52,8 @@
 
 #include "peripheral.h"
 #include "gapbondmgr.h"
+#include "sprintron_keyfob_app.h"
+#include "sprintron_keyfob_profile.h"
 
 /*********************************************************************
  * MACROS
@@ -1086,8 +1088,45 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
             osal_start_timerEx( gapRole_TaskID, START_CONN_UPDATE_EVT, timeout*1000 );
           }
 
-          // Notify the Bond Manager to the connection
-          VOID GAPBondMgr_LinkEst( pPkt->devAddrType, pPkt->devAddr, pPkt->connectionHandle, GAP_PROFILE_PERIPHERAL );
+          // Notify the Bond Manager to the connection - commend out by Sprintron
+          // VOID GAPBondMgr_LinkEst( pPkt->devAddrType, pPkt->devAddr, pPkt->connectionHandle, GAP_PROFILE_PERIPHERAL );
+
+          // Sprintron Add: if bonded, check if IRK is resolvable. If yes, stay connection. If no, drop connection.
+          // If not bonded, then check if allow_bond is true. If no, then drop connection. If yes, allow bonding process.
+          if (bonded == TRUE) //already bonded with an iPhone
+          {
+            uint8 idx;     // NV Index
+            uint8 publicAddr[B_ADDR_LEN] = {0, 0, 0, 0, 0, 0};// Place to put the public address
+            idx = GAPBondMgr_ResolveAddr( pPkt->devAddrType, pPkt->devAddr, publicAddr );
+            
+            if ( idx >= GAP_BONDINGS_MAX ) //resolved failed. 
+            {
+              // drop connection.
+              uint16 conn_handle;
+              GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+              HCI_EXT_DisconnectImmedCmd( conn_handle );
+            }
+          }
+          else //not bonded with an iPhone yet
+          {
+            if (allow_bond == TRUE) //allow bond.
+            {
+              // blink red LED to notify user that keyfob is waiting for bonding.
+              HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+              HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+
+              // reset 15s timer
+              osal_stop_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT);
+              osal_start_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, KEYFOB_WAIT_FOR_IRK_RECEIVED_PERIOD);
+            }
+            else //not allow for bonding (user didn't press button).
+            {
+              // drop connection.
+              uint16 conn_handle;
+              GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+              HCI_EXT_DisconnectImmedCmd( conn_handle );
+            }
+          }
           
           // Set enabler to FALSE; device will become discoverable again when
           // this value gets set to TRUE

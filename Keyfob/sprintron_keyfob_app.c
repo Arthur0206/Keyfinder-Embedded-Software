@@ -163,18 +163,6 @@
 #define P0ICON                                0 
 #define TESTER_CONNECTED()                    (P0_4==0)?TRUE:FALSE
 
-// keyfob will allow bonding for this period of time after button is pressed.
-#define KEYFOB_ALLOW_BOND_PERIOD              15000
-
-// keyfob will wait for pin code for this period of time after pin code request is sent to the remote device.
-#define KEYFOB_WAIT_FOR_PIN_PERIOD            15000
-
-// period of time for consistant red LED to notify bond failed
-#define KEYFOB_BOND_FAIL_LED_NOTIFY_TIME      2000
-
-// period of time for consistant green LED to notify bond success
-#define KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME   2000
-
 /*********************************************************************
  * TYPEDEFS
  */
