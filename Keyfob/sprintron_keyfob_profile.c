@@ -509,6 +509,10 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
+    case SPRINTRON_MAN_SEC_PERMISSION: 
+      sprintronManSecAttrTbl[2].permissions = *((uint8 *)value);
+      break;
+      
     case SPRINTRON_MAN_SEC:
 	  if ( len == sizeof ( sprintronManSec ) )
 	  {
@@ -622,6 +626,10 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
+    case SPRINTRON_MAN_SEC_PERMISSION: 
+      *((uint8*)value) = sprintronManSecAttrTbl[2].permissions;
+      break;
+      
     case SPRINTRON_MAN_SEC:
       osal_memcpy(value, sprintronManSec, sizeof(sprintronManSec));
       break;

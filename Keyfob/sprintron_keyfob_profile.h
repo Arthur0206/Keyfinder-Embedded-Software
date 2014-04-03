@@ -55,12 +55,13 @@ extern "C"
 
 // Profile Parameters - used by set parameter & get parameter functions
 #define SPRINTRON_MAN_SEC                               0
-#define SPRINTRON_RSSI_VALUE                            1
-#define SPRINTRON_PROXIMITY_CONFIG                      2
-#define SPRINTRON_PROXIMITY_ALERT                       3
-#define SPRINTRON_CLIENT_TX_POWER                       4
-#define SPRINTRON_AUDIO_VISUAL_ALERT                    5
-#define SPRINTRON_DEVICE_CONFIG_PARAMETERS              6
+#define SPRINTRON_MAN_SEC_PERMISSION                    1
+#define SPRINTRON_RSSI_VALUE                            2
+#define SPRINTRON_PROXIMITY_CONFIG                      3
+#define SPRINTRON_PROXIMITY_ALERT                       4
+#define SPRINTRON_CLIENT_TX_POWER                       5
+#define SPRINTRON_AUDIO_VISUAL_ALERT                    6
+#define SPRINTRON_DEVICE_CONFIG_PARAMETERS              7
 
 // Sprintron Keyfob character value define
 #define MAN_SEC_FLAG_UNKNOWN                            0x0
