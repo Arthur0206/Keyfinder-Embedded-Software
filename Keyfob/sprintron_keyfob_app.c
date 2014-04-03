@@ -80,6 +80,7 @@
 #include "sprintron_keyfob_app.h"
 
 #include "osal_snv.h"
+#include "hal_board_cfg.h"
 
 /*********************************************************************
  * MACROS
@@ -275,6 +276,10 @@ int bonded = FALSE;
 
 // If button is pressed, and timer has not expired, then keyfob allow bonding.
 int allow_bond = FALSE;
+
+// Key press state for after bonded
+static uint8 key_press_state = NOT_PRESSED;
+static uint8 key_is_pressed_or_released = KEY_IS_PRESSED;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -799,6 +804,27 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     // consistant red LED for 2s
     HalLedBlink(HAL_LED_2, 1, HAL_LED_DEFAULT_DUTY_CYCLE, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
   }
+
+  // user press and hold button for enough time, so long press is acheved.
+  if (events & KFD_LONG_PRESS_COMPLETE_EVT)
+  { 
+    // add code here to send notification to iPhone.
+    
+    // notify the user that long press is achieved by blinking LED2.
+	(void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
+    HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+    osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_LONG_PRESS_NOTIFY_TIME);
+    key_press_state = LONG_PRESS_ACCHIEVED;
+  }
+
+  // short press and long press notification time is expired.
+  if (events & KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT)
+  {
+    // turn off LEDs and go back to NOT_PRESSED state.
+    (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_CONSERVE ); 
+    HalLedSet( HAL_LED_1 | HAL_LED_2 , HAL_LED_MODE_OFF );
+    key_press_state = NOT_PRESSED;
+  }
   
   // Discard unknown events
   return 0;
@@ -837,29 +863,47 @@ static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
  */
 static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 {
-
   (void)shift;  // Intentionally unreferenced parameter
 
-  if ( keys & HAL_KEY_SW_1 )
+  // key release event won't have (keys & HAL_KEY_SW_2), so remove that condition check.
+  
+  // already bonded. 
+  if (bonded == TRUE) 
   {
-    // Can use this button to do some test. Not needed in production - Sprintron
+    if (key_press_state == NOT_PRESSED && key_is_pressed_or_released == KEY_IS_PRESSED) 
+    {
+      // set up a 5s timer. If it expired, long press is completed.
+      osal_start_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT, KEYFOB_LONG_PRESS_HOLD_TIME);
+      
+      key_press_state = PRESSED_COUNTING;
+    } 
+    else if (key_press_state == PRESSED_COUNTING && key_is_pressed_or_released == KEY_IS_RELEASED) 
+    {
+      osal_stop_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT);
+
+      // notify the user that the keyfob is bonded by blinking LED1.      
+      (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
+      
+      HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+
+      osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_SHORT_PRESS_NOTIFY_TIME);
+
+      key_press_state = SHORT_PRESS_ACCHIEVED;
+    }      
+  } 
+  else 
+  {
+    allow_bond = TRUE;
+
+    // blink red LED to notify user that keyfob is waiting for bonding.
+    HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+
+    // set up a 15s timer
+    osal_start_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, KEYFOB_WAIT_FOR_CONNECT_PERIOD);
   }
 
-  if ( keys & HAL_KEY_SW_2 )
-  {
-    if (bonded == TRUE) {
-      // already bonded. add code to consistant blink green LED for 1s to notify user.
-    } else {
-      allow_bond = TRUE;
-
-      // blink red LED to notify user that keyfob is waiting for bonding.
-      HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
-
-      // set up a 15s timer
-      osal_start_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, KEYFOB_ALLOW_BOND_PERIOD);
-    }
-  }
-
+  // reverse the key press status, which indicates the key status when the callback is called next time.
+  key_is_pressed_or_released = (key_is_pressed_or_released == KEY_IS_PRESSED) ? KEY_IS_RELEASED : KEY_IS_PRESSED;
 }
 
 /*********************************************************************

@@ -70,6 +70,18 @@ extern "C"
 #define KFD_BUZZER_ALERT_TIME_EXPIRED_EVT                 0x0400
 #define KFD_LED_ALERT_TIME_EXPIRED_EVT                    0x0800
 #define KFD_BOND_NOT_COMPLETE_IN_TIME_EVT                 0x1000
+#define KFD_LONG_PRESS_COMPLETE_EVT                       0x2000
+#define KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT          0x4000
+
+// Key press event type: pressed or released
+#define KEY_IS_PRESSED                                    0x0
+#define KEY_IS_RELEASED                                   0x1
+
+// States of key press state machine
+#define NOT_PRESSED                                       0x0
+#define PRESSED_COUNTING                                  0x1
+#define SHORT_PRESS_ACCHIEVED                             0x2
+#define LONG_PRESS_ACCHIEVED                              0x3
 
 // keyfob will allow bonding for this period of time after button is pressed.
 #define KEYFOB_WAIT_FOR_CONNECT_PERIOD        15000
@@ -82,6 +94,12 @@ extern "C"
 
 // period of time for consistant green LED to notify bond success
 #define KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME   2000
+
+#define KEYFOB_LONG_PRESS_HOLD_TIME           4000
+
+#define KEYFOB_LONG_PRESS_NOTIFY_TIME         2000
+
+#define KEYFOB_SHORT_PRESS_NOTIFY_TIME        500
 
 extern int bonded;
 extern int allow_bond;
