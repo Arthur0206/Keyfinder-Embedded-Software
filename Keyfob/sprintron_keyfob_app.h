@@ -83,6 +83,8 @@ extern "C"
 #define SHORT_PRESS_ACCHIEVED                             0x2
 #define LONG_PRESS_ACCHIEVED                              0x3
 
+#define KEYFOB_DEFAULT_PIN_CODE               201406     
+
 // keyfob will allow bonding for this period of time after button is pressed.
 #define KEYFOB_WAIT_FOR_CONNECT_PERIOD        15000
 

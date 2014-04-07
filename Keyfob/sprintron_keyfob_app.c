@@ -561,11 +561,13 @@ void KeyFobApp_Init( uint8 task_id )
   
     // Setup the GAP Bond Manager
     {
+      uint32 passkey = KEYFOB_DEFAULT_PIN_CODE;
       uint8 pairMode = GAPBOND_PAIRING_MODE_WAIT_FOR_REQ;
       uint8 mitm = TRUE;
       uint8 ioCap = GAPBOND_IO_CAP_DISPLAY_ONLY;
       uint8 bonding = TRUE;
-      
+
+      GAPBondMgr_SetParameter( GAPBOND_DEFAULT_PASSCODE, sizeof ( uint32 ), &passkey );
       GAPBondMgr_SetParameter( GAPBOND_PAIRING_MODE, sizeof ( uint8 ), &pairMode );
       GAPBondMgr_SetParameter( GAPBOND_MITM_PROTECTION, sizeof ( uint8 ), &mitm );
       GAPBondMgr_SetParameter( GAPBOND_IO_CAPABILITIES, sizeof ( uint8 ), &ioCap );
