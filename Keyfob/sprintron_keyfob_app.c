@@ -271,9 +271,6 @@ static uint8 attDeviceName[GAP_DEVICE_NAME_LEN] = "Sprintron Keyfob";
 static uint8 buzzer_state = BUZZER_OFF;
 static uint8 buzzer_beep_count = 0;
 
-// If keyfob has been bonded with an iPhone
-int bonded = FALSE;
-
 // If button is pressed, and timer has not expired, then keyfob allow bonding.
 int allow_bond = FALSE;
 
@@ -791,20 +788,18 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   // bond and pin code exchange is not succesfull within defined period. Drop connection and disallow bond.
   if (events & KFD_BOND_NOT_COMPLETE_IN_TIME_EVT)
   {
-    uint16 conn_handle;
-
     allow_bond = FALSE;
-
-    GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
-
-    HCI_EXT_DisconnectImmedCmd( conn_handle );
 
     // turn off LEDs
     HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
     HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
 
-    // consistant red LED for 2s
-    HalLedBlink(HAL_LED_2, 1, HAL_LED_DEFAULT_DUTY_CYCLE, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
+    // notify the user that bonding failed by steady red LED for 2s.      
+    (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
+    
+    HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+    
+    osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
   }
 
   // user press and hold button for enough time, so long press is acheved.
