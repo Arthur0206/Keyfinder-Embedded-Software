@@ -71,7 +71,8 @@ extern "C"
 #define KFD_LED_ALERT_TIME_EXPIRED_EVT                    0x0800
 #define KFD_BOND_NOT_COMPLETE_IN_TIME_EVT                 0x1000
 #define KFD_LONG_PRESS_COMPLETE_EVT                       0x2000
-#define KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT          0x4000
+#define KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT                 0x4000
+#define KFD_LED_NOTIFY_COMPLETE_EVT                       0x8000
 
 // Key press event type: pressed or released
 #define KEY_IS_PRESSED                                    0x0
@@ -80,8 +81,6 @@ extern "C"
 // States of key press state machine
 #define NOT_PRESSED                                       0x0
 #define PRESSED_COUNTING                                  0x1
-#define SHORT_PRESS_ACCHIEVED                             0x2
-#define LONG_PRESS_ACCHIEVED                              0x3
 
 #define KEYFOB_DEFAULT_PIN_CODE               201406     
 
@@ -98,7 +97,7 @@ extern "C"
 
 #define KEYFOB_LONG_PRESS_NOTIFY_TIME         2000
 
-#define KEYFOB_SHORT_PRESS_NOTIFY_TIME        500
+#define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      2000
 
 extern int allow_bond;
 

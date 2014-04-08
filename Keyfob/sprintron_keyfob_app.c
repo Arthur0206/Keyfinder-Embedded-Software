@@ -790,16 +790,15 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   {
     allow_bond = FALSE;
 
-    // turn off LEDs
+    // turn off green LED
     HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
-    HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
 
     // notify the user that bonding failed by steady red LED for 2s.      
     (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
     
     HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
     
-    osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
+    osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
   }
 
   // user press and hold button for enough time, so long press is acheved.
@@ -810,17 +809,22 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     // notify the user that long press is achieved by blinking LED2.
 	(void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
     HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
-    osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_LONG_PRESS_NOTIFY_TIME);
-    key_press_state = LONG_PRESS_ACCHIEVED;
+    osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_LONG_PRESS_NOTIFY_TIME);
   }
 
-  // short press and long press notification time is expired.
-  if (events & KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT)
+  // double click time is expired.
+  if (events & KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT)
   {
-    // turn off LEDs and go back to NOT_PRESSED state.
+    // set the state back to initial state.
+    key_press_state = NOT_PRESSED;
+  }
+  
+  // led notification time is expired.
+  if (events & KFD_LED_NOTIFY_COMPLETE_EVT)
+  {
+    // turn off LEDs and change power saving mode to CONSERVE.
     (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_CONSERVE ); 
     HalLedSet( HAL_LED_1 | HAL_LED_2 , HAL_LED_MODE_OFF );
-    key_press_state = NOT_PRESSED;
   }
   
   // Discard unknown events
@@ -863,40 +867,42 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
   (void)shift;  // Intentionally unreferenced parameter
 
   // key release event won't have (keys & HAL_KEY_SW_2), so remove that condition check.
-  
-  // already bonded. 
-  if (bonded == TRUE) 
+
+  if (key_is_pressed_or_released == KEY_IS_PRESSED)
   {
-    if (key_press_state == NOT_PRESSED && key_is_pressed_or_released == KEY_IS_PRESSED) 
+    // No matter what state, set up a 5s timer. If it expired, long press is completed.
+    osal_start_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT, KEYFOB_LONG_PRESS_HOLD_TIME);
+
+    if (key_press_state == NOT_PRESSED) 
     {
-      // set up a 5s timer. If it expired, long press is completed.
-      osal_start_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT, KEYFOB_LONG_PRESS_HOLD_TIME);
+      // start a 2s timer. It will set the state back to NOT_PRESSED when expired.
+      osal_start_timerEx(keyfobapp_TaskID, KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT, KEYFOB_DOUBLE_CLICK_EXPIRED_TIME);
       
       key_press_state = PRESSED_COUNTING;
-    } 
-    else if (key_press_state == PRESSED_COUNTING && key_is_pressed_or_released == KEY_IS_RELEASED) 
+    }
+    else if (key_press_state == PRESSED_COUNTING)
     {
-      osal_stop_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT);
+      allow_bond = TRUE;
+		
+      // blink red LED to notify user that keyfob is waiting for bonding.
+      HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
 
-      // notify the user that the keyfob is bonded by blinking LED1.      
-      (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
-      
-      HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+      // stop the double click counting timer
+      osal_stop_timerEx(keyfobapp_TaskID, KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT);
 
-      osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_SHORT_PRESS_NOTIFY_TIME);
+      // if a 15s timer has already been set, stop it.
+      osal_stop_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT);
 
-      key_press_state = SHORT_PRESS_ACCHIEVED;
-    }      
-  } 
+      // set up a new 15s timer
+      osal_start_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, KEYFOB_WAIT_FOR_CONNECT_PERIOD);
+
+      key_press_state = NOT_PRESSED;
+    }
+  }
   else 
   {
-    allow_bond = TRUE;
-
-    // blink red LED to notify user that keyfob is waiting for bonding.
-    HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
-
-    // set up a 15s timer
-    osal_start_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, KEYFOB_WAIT_FOR_CONNECT_PERIOD);
+    // No matter what state, stop the 5s timer.
+    osal_stop_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT);
   }
 
   // reverse the key press status, which indicates the key status when the callback is called next time.
