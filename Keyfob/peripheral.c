@@ -1091,40 +1091,32 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
           // Notify the Bond Manager to the connection - commend out by Sprintron
           // VOID GAPBondMgr_LinkEst( pPkt->devAddrType, pPkt->devAddr, pPkt->connectionHandle, GAP_PROFILE_PERIPHERAL );
 
-          // Sprintron Add: if bonded, check if IRK is resolvable. If yes, stay connection. If no, drop connection.
-          // If not bonded, then check if allow_bond is true. If no, then drop connection. If yes, allow bonding process.
-          if (bonded == TRUE) //already bonded with an iPhone
+          // Sprintron Add: check if addr is resolvable. If not, drop connection.
           {
             uint8 idx;     // NV Index
             uint8 publicAddr[B_ADDR_LEN] = {0, 0, 0, 0, 0, 0};// Place to put the public address
             idx = GAPBondMgr_ResolveAddr( pPkt->devAddrType, pPkt->devAddr, publicAddr );
             
-            if ( idx >= GAP_BONDINGS_MAX ) //resolved failed. 
+            if ( idx >= GAP_BONDINGS_MAX )
             {
-              // drop connection.
-              uint16 conn_handle;
-              GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
-              HCI_EXT_DisconnectImmedCmd( conn_handle );
+              // resolved failed. drop connection if button is not pressed. allow bond if pressed.
+              if (allow_bond == FALSE)
+              {
+                // drop connection.
+                uint16 conn_handle;
+                GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+                HCI_EXT_DisconnectImmedCmd( conn_handle );
+              }
+              else
+              {
+                // set authentication bit, allow bonding.
+                sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_AUTHEN_READ | GATT_PERMIT_AUTHEN_WRITE);
+              }
             }
-          }
-          else //not bonded with an iPhone yet
-          {
-            if (allow_bond == TRUE) //allow bond.
+            else
             {
-              // blink red LED to notify user that keyfob is waiting for bonding.
-              HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
-              HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
-
-              // reset 15s timer
-              osal_stop_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT);
-              osal_start_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, KEYFOB_WAIT_FOR_IRK_RECEIVED_PERIOD);
-            }
-            else //not allow for bonding (user didn't press button).
-            {
-              // drop connection.
-              uint16 conn_handle;
-              GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
-              HCI_EXT_DisconnectImmedCmd( conn_handle );
+              // address is resolved. maintain connection and clear authentication bit.
+              sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), GATT_PERMIT_READ | GATT_PERMIT_WRITE);
             }
           }
           
@@ -1152,6 +1144,9 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
     case GAP_LINK_TERMINATED_EVENT:
       {
         gapTerminateLinkEvent_t *pPkt = (gapTerminateLinkEvent_t *)pMsg;
+
+        // Sprintron: clear authentication bit when connection is terminated.
+        sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), GATT_PERMIT_READ | GATT_PERMIT_WRITE);
 
         VOID GAPBondMgr_ProcessGAPMsg( (gapEventHdr_t *)pMsg );
         osal_memset( gapRole_ConnectedDevAddr, 0, B_ADDR_LEN );
@@ -1193,7 +1188,29 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
         gapRole_ConnectionHandle = INVALID_CONNHANDLE;
       }
       break;
+      
+    case GAP_AUTHENTICATION_COMPLETE_EVENT:
+      {
+        gapAuthCompleteEvent_t *pPkt = (gapAuthCompleteEvent_t *)pMsg;
 
+        if (pPkt->pIdentityInfo != NULL) //received IRK
+        {
+          osal_stop_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT);
+
+          // turn off LEDs
+          HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
+          HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+    
+          // notify the user that bonding successful by steady green LED for 2s.      
+          (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
+            
+          HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+            
+          osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME);
+        }
+      }
+      break;
+      
     case GAP_LINK_PARAM_UPDATE_EVENT:
       {
         gapLinkUpdateEvent_t *pPkt = (gapLinkUpdateEvent_t *)pMsg;
