@@ -276,7 +276,6 @@ int allow_bond = FALSE;
 
 // Key press state for after bonded
 static uint8 key_press_state = NOT_PRESSED;
-static uint8 key_is_pressed_or_released = KEY_IS_PRESSED;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -866,10 +865,11 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 {
   (void)shift;  // Intentionally unreferenced parameter
 
-  // key release event won't have (keys & HAL_KEY_SW_2), so remove that condition check.
-
-  if (key_is_pressed_or_released == KEY_IS_PRESSED)
+  // only support one button (right one)
+  
+  if (keys & HAL_KEY_SW_2)
   {
+    // right button is pressed.
     // No matter what state, set up a 5s timer. If it expired, long press is completed.
     osal_start_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT, KEYFOB_LONG_PRESS_HOLD_TIME);
 
@@ -899,14 +899,12 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
       key_press_state = NOT_PRESSED;
     }
   }
-  else 
-  {
+  else
+  { 
+    // button is released.
     // No matter what state, stop the 5s timer.
     osal_stop_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT);
   }
-
-  // reverse the key press status, which indicates the key status when the callback is called next time.
-  key_is_pressed_or_released = (key_is_pressed_or_released == KEY_IS_PRESSED) ? KEY_IS_RELEASED : KEY_IS_PRESSED;
 }
 
 /*********************************************************************
