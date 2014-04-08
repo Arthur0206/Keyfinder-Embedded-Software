@@ -790,7 +790,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   {
     allow_bond = FALSE;
 
-    // turn off LEDs
+    // turn off green LED
     HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
 
     // notify the user that bonding failed by steady red LED for 2s.      
@@ -798,7 +798,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     
     HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
     
-    osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
+    osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
   }
 
   // user press and hold button for enough time, so long press is acheved.
