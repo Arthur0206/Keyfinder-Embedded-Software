@@ -87,9 +87,6 @@ extern "C"
 // keyfob will allow bonding for this period of time after button is pressed.
 #define KEYFOB_WAIT_FOR_CONNECT_PERIOD        15000
 
-// keyfob will wait for pin code for this period of time after pin code request is sent to the remote device.
-#define KEYFOB_WAIT_FOR_IRK_RECEIVED_PERIOD   15000
-
 // period of time for consistant red LED to notify bond failed
 #define KEYFOB_BOND_FAIL_LED_NOTIFY_TIME      2000
 
@@ -102,7 +99,6 @@ extern "C"
 
 #define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      2000
 
-extern int bonded;
 extern int allow_bond;
 
 // Key Fob NV Item ID
