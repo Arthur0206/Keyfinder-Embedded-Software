@@ -100,7 +100,6 @@ extern "C"
 
 #define KEYFOB_SHORT_PRESS_NOTIFY_TIME        500
 
-extern int bonded;
 extern int allow_bond;
 
 // Key Fob NV Item ID
