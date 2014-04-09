@@ -777,8 +777,23 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
       // No need for "GATT_SERVICE_UUID" or "GATT_CLIENT_CHAR_CFG_UUID" cases;
       // gattserverapp handles those types for reads 
       case SPRINTRON_MAN_SEC_UUID:
-        *pLen = sizeof(sprintronManSec);
-        osal_memcpy(pValue, pAttr->pValue, *pLen);
+        {
+          uint16 conn_handle;
+          uint8 permission;
+            
+          GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+          sprintronKeyfob_GetParameter(SPRINTRON_MAN_SEC_PERMISSION, &permission);
+            
+          if ( (permission & GATT_PERMIT_AUTHEN_READ) && linkDB_Encrypted(connHandle) == FALSE )
+          {
+            status = ATT_ERR_INSUFFICIENT_AUTHEN;
+          }
+          else
+          {
+            *pLen = sizeof(sprintronManSec);
+            osal_memcpy(pValue, pAttr->pValue, *pLen);
+          }
+        }
         break;
         
       case SPRINTRON_RSSI_VALUE_UUID: //sprintronRssiValue
@@ -841,16 +856,31 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
     switch ( uuid )
     {
       case SPRINTRON_MAN_SEC_UUID:
-        if ( len > sizeof(sprintronManSec) )
         {
-          status = ATT_ERR_INVALID_VALUE_SIZE;
-        }
-        else
-        {
-          //Write the value
-          uint8 *pCurValue = (uint8 *)pAttr->pValue;
-		  osal_memcpy( (void*)pCurValue, (void*)pValue, sizeof(sprintronManSec) );
-          notify = SPRINTRON_MAN_SEC;          
+          uint16 conn_handle;
+          uint8 permission;
+          
+          GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+          sprintronKeyfob_GetParameter(SPRINTRON_MAN_SEC_PERMISSION, &permission);
+          
+          if ( (permission & GATT_PERMIT_AUTHEN_WRITE) && linkDB_Encrypted(connHandle) == FALSE )
+          {
+            status = ATT_ERR_INSUFFICIENT_AUTHEN;
+          }
+          else
+          {
+            if ( len > sizeof(sprintronManSec) )
+            {
+              status = ATT_ERR_INVALID_VALUE_SIZE;
+            }
+            else
+            {
+              //Write the value
+              uint8 *pCurValue = (uint8 *)pAttr->pValue;
+  		      osal_memcpy( (void*)pCurValue, (void*)pValue, sizeof(sprintronManSec) );
+              notify = SPRINTRON_MAN_SEC;          
+            }
+          }
         }
         break;
 		

@@ -88,9 +88,9 @@ extern "C"
 // period of time for consistant green LED to notify bond success
 #define KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME   2000
 
-#define KEYFOB_LONG_PRESS_HOLD_TIME           4000
+#define KEYFOB_LONG_PRESS_HOLD_TIME           3000
 
-#define KEYFOB_LONG_PRESS_NOTIFY_TIME         2000
+#define KEYFOB_LONG_PRESS_NOTIFY_TIME         3000
 
 #define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      1000
 

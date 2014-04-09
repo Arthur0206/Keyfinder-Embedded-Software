@@ -791,6 +791,11 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   {
     allow_bond = FALSE;
 
+    // drop connection.
+    uint16 conn_handle;
+    GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+    HCI_EXT_DisconnectImmedCmd( conn_handle );
+
     // turn off green LED
     HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
 
