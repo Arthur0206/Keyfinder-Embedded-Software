@@ -135,6 +135,18 @@ CONST uint8 sprintronAudioVisualAlertUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID ), HI_UINT16( SPRINTRON_AUDIO_VISUAL_ALERT_UUID )
 };
 
+// Sprintron Panic Alert Service UUID
+CONST uint8 sprintronPanicAlertServiceUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_PANIC_ALERT_SERVICE_UUID ), HI_UINT16( SPRINTRON_PANIC_ALERT_SERVICE_UUID )
+};
+
+// Sprintron Panic Alert UUID
+CONST uint8 sprintronPanicAlertUUID[ATT_BT_UUID_SIZE] =
+{ 
+  LO_UINT16( SPRINTRON_PANIC_ALERT_UUID ), HI_UINT16( SPRINTRON_PANIC_ALERT_UUID )
+};
+
 // Sprintron Device Config Service UUID
 CONST uint8 sprintronDeviceConfigServiceUUID[ATT_BT_UUID_SIZE] =
 { 
@@ -169,6 +181,7 @@ static CONST gattAttrType_t sprintronRssiReportService = { ATT_BT_UUID_SIZE, spr
 static CONST gattAttrType_t sprintronProximityAlertService = { ATT_BT_UUID_SIZE, sprintronProximityAlertServiceUUID };
 static CONST gattAttrType_t sprintronClientTxPowerService = { ATT_BT_UUID_SIZE, sprintronClientTxPowerServiceUUID };
 static CONST gattAttrType_t sprintronAudioVisualAlertService = { ATT_BT_UUID_SIZE, sprintronAudioVisualAlertServiceUUID };
+static CONST gattAttrType_t sprintronPanicAlertService = { ATT_BT_UUID_SIZE, sprintronPanicAlertServiceUUID };
 static CONST gattAttrType_t sprintronDeviceConfigService = { ATT_BT_UUID_SIZE, sprintronDeviceConfigServiceUUID };
 
 static uint8 sprintronManSecCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
@@ -182,7 +195,7 @@ static gattCharCfg_t sprintronRssiValueConfig[GATT_MAX_NUM_CONN];
 
 static uint8 sprintronProximityConfigCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static int8 sprintronProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;
-static uint8 sprintronProximityAlertCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY; // | GATT_PROP_INDICATE;
+static uint8 sprintronProximityAlertCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
 static uint8 sprintronProximityAlert = PROXIMITY_ALERT_IN_RANGE;
 static gattCharCfg_t sprintronProximityAlertConfig[GATT_MAX_NUM_CONN];
 
@@ -191,6 +204,10 @@ static int8 sprintronClientTxPower = CLIENT_TX_POWER_DEFAULT_VALUE;
 
 static uint8 sprintronAudioVisualAlertCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint32 sprintronAudioVisualAlert = AUDIO_VISUAL_ALERT_ALL_OFF;
+
+static uint8 sprintronPanicAlertCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
+static uint8 sprintronPanicAlert = PANIC_ALERT_OFF;
+static gattCharCfg_t sprintronPanicAlertConfig[GATT_MAX_NUM_CONN];
 
 static uint8 sprintronDeviceConfigParametersCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint16 sprintronDeviceConfigParameters[5] = { CONNECTION_INTERVAL_DEFAULT_VALUE,
@@ -354,6 +371,38 @@ static gattAttribute_t sprintronAudioVisualAlertAttrTbl[] =
       },
 };
 
+static gattAttribute_t sprintronPanicAlertAttrTbl[] =
+{
+  // Sprintron Rssi Report Service
+  {
+    { ATT_BT_UUID_SIZE, primaryServiceUUID },
+    GATT_PERMIT_READ,
+    0,
+    (uint8 *)&sprintronPanicAlertService
+  },
+    // Characteristic Declaration
+    {
+      {ATT_BT_UUID_SIZE, characterUUID},
+	  GATT_PERMIT_READ,
+	  0,
+	  (uint8 *)&sprintronPanicAlertCharProps
+    },
+      // Panic Alert
+      { 
+        { ATT_BT_UUID_SIZE, sprintronPanicAlertUUID},
+        GATT_PERMIT_READ, 
+        0, 
+        (uint8 *)&sprintronPanicAlert
+      },
+        // Characteristic configuration
+        { 
+          { ATT_BT_UUID_SIZE, clientCharCfgUUID },
+          GATT_PERMIT_READ | GATT_PERMIT_WRITE, 
+          0, 
+          (uint8 *)sprintronPanicAlertConfig
+        },
+};
+
 static gattAttribute_t sprintronDeviceConfigAttrTbl[] = 
 {
   // Sprintron Device Config Service
@@ -424,7 +473,7 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
 										  &sprintronKeyfobCBs);
   }
   
-  if ( services & SPRINTRON_RSSI_REPORT_SERVICE )
+  if ( ( status == SUCCESS ) && services & SPRINTRON_RSSI_REPORT_SERVICE ) )
   {
     GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronRssiValueConfig );
     status = GATTServApp_RegisterService( sprintronRssiReportAttrTbl,
@@ -451,6 +500,14 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
   {
     status = GATTServApp_RegisterService( sprintronAudioVisualAlertAttrTbl,
                                           GATT_NUM_ATTRS( sprintronAudioVisualAlertAttrTbl ),
+                                          &sprintronKeyfobCBs);
+  }
+  
+  if ( ( status == SUCCESS ) && ( services & SPRINTRON_PANIC_ALERT_SERVICE) )
+  {
+    GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronPanicAlertConfig );
+    status = GATTServApp_RegisterService( sprintronPanicAlertAttrTbl,
+                                          GATT_NUM_ATTRS( sprintronPanicAlertAttrTbl ),
                                           &sprintronKeyfobCBs);
   }
 
@@ -588,6 +645,25 @@ bStatus_t sprintronKeyfob_SetParameter( uint8 param, uint8 len, void *value )
         ret = bleInvalidRange;
       }
       break;
+      
+	case SPRINTRON_PANIC_ALERT:
+      if ( len == sizeof ( sprintronPanicAlert ) ) 
+      {
+        sprintronPanicAlert = *((uint8*)value);
+
+		if (sprintronPanicAlert == PANIC_ALERT_ON)
+		{
+          // See if Notification has been enabled
+          GATTServApp_ProcessCharCfg( sprintronPanicAlertConfig, (uint8 *)&sprintronPanicAlert, FALSE, 
+                                      sprintronPanicAlertAttrTbl, GATT_NUM_ATTRS( sprintronPanicAlertAttrTbl ),
+                                      INVALID_TASK_ID );
+        }
+      }
+      else
+      {
+        ret = bleInvalidRange;
+      }
+      break;
 
 	case SPRINTRON_DEVICE_CONFIG_PARAMETERS:
       if ( len == sizeof ( sprintronDeviceConfigParameters ) )
@@ -643,15 +719,19 @@ bStatus_t sprintronKeyfob_GetParameter( uint8 param, void *value )
       break;
       
     case SPRINTRON_PROXIMITY_ALERT:
-      *((int8*)value) = sprintronProximityAlert;
+      *((uint8*)value) = sprintronProximityAlert;
       break;
 
     case SPRINTRON_CLIENT_TX_POWER:
-      *((uint8*)value) = sprintronClientTxPower;
+      *((int8*)value) = sprintronClientTxPower;
       break;
 
     case SPRINTRON_AUDIO_VISUAL_ALERT:
       *((uint32*)value) = sprintronAudioVisualAlert;
+      break;
+      
+	case SPRINTRON_PANIC_ALERT:
+      *((uint8*)value) = sprintronPanicAlert;
       break;
 
     case SPRINTRON_DEVICE_CONFIG_PARAMETERS:
@@ -705,6 +785,7 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
       case SPRINTRON_PROXIMITY_CONFIG_UUID: //sprintronProximityConfig
       case SPRINTRON_PROXIMITY_ALERT_UUID: //sprintronProximityAlert
       case SPRINTRON_CLIENT_TX_POWER_UUID: //sprintronClientTxPower
+      case SPRINTRON_PANIC_ALERT_UUID: //sprintronPanicAlert
         *pLen = 1;
         pValue[0] = *pAttr->pValue;
         break;

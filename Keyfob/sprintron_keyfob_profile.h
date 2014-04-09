@@ -61,7 +61,8 @@ extern "C"
 #define SPRINTRON_PROXIMITY_ALERT                       4
 #define SPRINTRON_CLIENT_TX_POWER                       5
 #define SPRINTRON_AUDIO_VISUAL_ALERT                    6
-#define SPRINTRON_DEVICE_CONFIG_PARAMETERS              7
+#define SPRINTRON_PANIC_ALERT                           7
+#define SPRINTRON_DEVICE_CONFIG_PARAMETERS              8
 
 // Sprintron Keyfob character value define
 #define MAN_SEC_FLAG_UNKNOWN                            0x0
@@ -85,6 +86,8 @@ extern "C"
 #define LED_ALERT_OFF                                   0x0
 #define LED_ALERT_ON                                    0x1
 
+#define PANIC_ALERT_OFF                                 0x0
+#define PANIC_ALERT_ON                                  0x1
 
 // unit is 1.25ms => 400 = 500ms
 #define CONNECTION_INTERVAL_DEFAULT_VALUE               400
@@ -103,7 +106,8 @@ extern "C"
 #define SPRINTRON_PROXIMITY_ALERT_SERVICE_UUID          0xFFA2
 #define SPRINTRON_CLIENT_TX_POWER_SERVICE_UUID          0xFFA4
 #define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE_UUID       0xFFA5
-#define SPRINTRON_DEVICE_CONFIG_SERVICE_UUID            0xFFA6
+#define SPRINTRON_PANIC_ALERT_SERVICE_UUID              0xFFA6
+#define SPRINTRON_DEVICE_CONFIG_SERVICE_UUID            0xFFA7
 
 // Sprintron Char UUID
 #define SPRINTRON_MAN_SEC_UUID                          0xFFC0
@@ -112,7 +116,8 @@ extern "C"
 #define SPRINTRON_PROXIMITY_CONFIG_UUID                 0xFFC3
 #define SPRINTRON_CLIENT_TX_POWER_UUID                  0xFFC4
 #define SPRINTRON_AUDIO_VISUAL_ALERT_UUID               0xFFC5
-#define SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID         0xFFC6
+#define SPRINTRON_PANIC_ALERT_UUID                      0xFFC6
+#define SPRINTRON_DEVICE_CONFIG_PARAMETERS_UUID         0xFFC7
 
 // Sprintron Keyfob Profile Services bit fields
 #define SPRINTRON_RSSI_MAN_SEC_SERVICE                  0x00000001
@@ -120,7 +125,8 @@ extern "C"
 #define SPRINTRON_PROXIMITY_ALERT_SERVICE               0x00000004
 #define SPRINTRON_CLIENT_TX_POWER_SERVICE               0x00000008
 #define SPRINTRON_AUDIO_VISUAL_ALERT_SERVICE            0x00000010
-#define SPRINTRON_DEVICE_CONFIG_SERVICE                 0x00000020
+#define SPRINTRON_PANIC_ALERT_SERVICE                   0x00000020
+#define SPRINTRON_DEVICE_CONFIG_SERVICE                 0x00000040
 
 // Device config parameters sequence
 #define CONFIG_IDX_CONNECTION_INTERVAL                  0

@@ -196,6 +196,7 @@ static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE;
 static int8 keyfobProximityConfig = PROXIMITY_CONFIG_DEFAULT_VALUE;    
 static uint8 keyfobProximityAlert = PROXIMITY_ALERT_IN_RANGE;  
 static uint32 keyfobAudioVisualAlert = AUDIO_VISUAL_ALERT_ALL_OFF; 
+static uint8 keyfobPanicAlert = PANIC_ALERT_OFF;
 static uint16 keyfobDeviceConfigParameters[5] = { // connection parameters
 	                                              CONNECTION_INTERVAL_DEFAULT_VALUE,
 	                                              SUPERVISION_TIMEOUT_DEFAULT_VALUE,
@@ -678,6 +679,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
     sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
     sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+    sprintronKeyfob_SetParameter( SPRINTRON_PANIC_ALERT,  sizeof ( keyfobPanicAlert ), &keyfobPanicAlert );
     sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS,  sizeof ( keyfobDeviceConfigParameters ), keyfobDeviceConfigParameters );
 
     // Set LED1 on to give feedback that the power is on, and a timer to turn off
@@ -803,8 +805,12 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   // user press and hold button for enough time, so long press is acheved.
   if (events & KFD_LONG_PRESS_COMPLETE_EVT)
   { 
-    // add code here to send notification to iPhone.
-    
+    // send notification to iPhone.
+    keyfobPanicAlert = PANIC_ALERT_ON;
+    sprintronKeyfob_SetParameter( SPRINTRON_PANIC_ALERT,  sizeof ( uint8 ), &keyfobPanicAlert );
+    keyfobPanicAlert = PANIC_ALERT_OFF;
+    sprintronKeyfob_SetParameter( SPRINTRON_PANIC_ALERT,  sizeof ( uint8 ), &keyfobPanicAlert );
+        
     // notify the user that long press is achieved by blinking LED2.
 	(void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
     HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
