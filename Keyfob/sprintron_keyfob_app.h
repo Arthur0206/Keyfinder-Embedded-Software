@@ -53,8 +53,6 @@ extern "C"
  * CONSTANTS
  */
 
-#define USE_WHITE_LIST_ADV                                1
-
 #define MAX_WHITELIST_LEN                                 8
 
 // Key Fob Task Events
@@ -63,16 +61,13 @@ extern "C"
 #define KFD_TOGGLE_BUZZER_EVT                             0x0008
 #define KFD_ADV_IN_CONNECTION_EVT                         0x0010
 #define KFD_POWERON_LED_TIMEOUT_EVT                       0x0020
-#define KFD_NON_WHITELIST_STOP_EVT                        0x0040
-#define KFD_NON_WHITELIST_START_EVT                       0x0080
-#define KFD_WHITELIST_START_EVT                           0x0100
-#define KFD_CONNECTION_INTERVAL_EVT                       0x0200
-#define KFD_BUZZER_ALERT_TIME_EXPIRED_EVT                 0x0400
-#define KFD_LED_ALERT_TIME_EXPIRED_EVT                    0x0800
-#define KFD_BOND_NOT_COMPLETE_IN_TIME_EVT                 0x1000
-#define KFD_LONG_PRESS_COMPLETE_EVT                       0x2000
-#define KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT                 0x4000
-#define KFD_LED_NOTIFY_COMPLETE_EVT                       0x8000
+#define KFD_CONNECTION_INTERVAL_EVT                       0x0040
+#define KFD_BUZZER_ALERT_TIME_EXPIRED_EVT                 0x0080
+#define KFD_LED_ALERT_TIME_EXPIRED_EVT                    0x0100
+#define KFD_BOND_NOT_COMPLETE_IN_TIME_EVT                 0x0200
+#define KFD_LONG_PRESS_COMPLETE_EVT                       0x0400
+#define KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT                 0x0800
+#define KFD_LED_NOTIFY_COMPLETE_EVT                       0x1000
 
 // Key press event type: pressed or released
 #define KEY_IS_PRESSED                                    0x0
@@ -88,7 +83,7 @@ extern "C"
 #define KEYFOB_WAIT_FOR_CONNECT_PERIOD        15000
 
 // period of time for consistant red LED to notify bond failed
-#define KEYFOB_BOND_FAIL_LED_NOTIFY_TIME      2000
+#define KEYFOB_BOND_FAIL_LED_NOTIFY_TIME      1000
 
 // period of time for consistant green LED to notify bond success
 #define KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME   2000
@@ -97,7 +92,7 @@ extern "C"
 
 #define KEYFOB_LONG_PRESS_NOTIFY_TIME         2000
 
-#define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      2000
+#define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      1000
 
 extern int allow_bond;
 
@@ -121,6 +116,8 @@ extern void KeyFobApp_Init( uint8 task_id );
  * Task Event Processor for the BLE Application
  */
 extern uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events );
+
+extern uint8 keyfobapp_TaskID;
 
 /*********************************************************************
 *********************************************************************/

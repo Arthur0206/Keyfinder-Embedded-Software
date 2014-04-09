@@ -183,7 +183,7 @@
 /*********************************************************************
  * LOCAL VARIABLES
  */
-static uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
+uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 
 static gaprole_States_t gapProfileState = GAPROLE_INIT;
 
@@ -281,10 +281,10 @@ static uint8 key_press_state = NOT_PRESSED;
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg );
+void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg );
 static void keyfobapp_PerformBuzzerAlert( void );
 static void keyfobapp_StopBuzzerAlert( void );
-static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
+void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
 static void updateRssiCB( int8 newRSSI );
@@ -830,6 +830,12 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     // turn off LEDs and change power saving mode to CONSERVE.
     (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_CONSERVE ); 
     HalLedSet( HAL_LED_1 | HAL_LED_2 , HAL_LED_MODE_OFF );
+
+    // if still waiting for KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, continue blink the red LED.
+    if ( osal_get_timeoutEx( keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT ) )
+    {
+      HalLedSet( HAL_LED_2 , HAL_LED_MODE_ON );
+    }
   }
   
   // Discard unknown events
@@ -845,7 +851,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
  *
  * @return  none
  */
-static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
+void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
 {
   switch ( pMsg->event )
   {
@@ -867,7 +873,7 @@ static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
  *
  * @return  none
  */
-static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
+void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 {
   (void)shift;  // Intentionally unreferenced parameter
 

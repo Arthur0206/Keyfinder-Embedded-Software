@@ -49,6 +49,8 @@
 #include "att.h"
 #include "gatt.h"
 #include "osal_snv.h"
+#include "hal_led.h"
+#include "OSAL_PwrMgr.h"
 
 #include "peripheral.h"
 #include "gapbondmgr.h"
@@ -1109,14 +1111,16 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
               }
               else
               {
+                uint8 perm = GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_AUTHEN_READ | GATT_PERMIT_AUTHEN_WRITE;
                 // set authentication bit, allow bonding.
-                sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_AUTHEN_READ | GATT_PERMIT_AUTHEN_WRITE);
+                sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), &perm);
               }
             }
             else
             {
               // address is resolved. maintain connection and clear authentication bit.
-              sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), GATT_PERMIT_READ | GATT_PERMIT_WRITE);
+              uint8 perm = GATT_PERMIT_READ | GATT_PERMIT_WRITE;
+              sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), &perm);
             }
           }
           
@@ -1144,9 +1148,11 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
     case GAP_LINK_TERMINATED_EVENT:
       {
         gapTerminateLinkEvent_t *pPkt = (gapTerminateLinkEvent_t *)pMsg;
+        
+        uint8 perm = GATT_PERMIT_READ | GATT_PERMIT_WRITE;
 
         // Sprintron: clear authentication bit when connection is terminated.
-        sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), GATT_PERMIT_READ | GATT_PERMIT_WRITE);
+        sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), &perm);
 
         VOID GAPBondMgr_ProcessGAPMsg( (gapEventHdr_t *)pMsg );
         osal_memset( gapRole_ConnectedDevAddr, 0, B_ADDR_LEN );
@@ -1206,7 +1212,7 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
             
           HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
             
-          osal_start_timerEx(keyfobapp_TaskID, KFD_SHORT_LONG_PRESS_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME);
+          osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME);
         }
       }
       break;

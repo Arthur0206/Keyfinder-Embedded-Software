@@ -473,7 +473,7 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
 										  &sprintronKeyfobCBs);
   }
   
-  if ( ( status == SUCCESS ) && services & SPRINTRON_RSSI_REPORT_SERVICE ) )
+  if ( ( status == SUCCESS ) && ( services & SPRINTRON_RSSI_REPORT_SERVICE ) )
   {
     GATTServApp_InitCharCfg( INVALID_CONNHANDLE, sprintronRssiValueConfig );
     status = GATTServApp_RegisterService( sprintronRssiReportAttrTbl,
