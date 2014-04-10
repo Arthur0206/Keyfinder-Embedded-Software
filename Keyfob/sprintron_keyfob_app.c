@@ -281,10 +281,10 @@ static uint8 key_press_state = NOT_PRESSED;
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg );
+static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg );
 static void keyfobapp_PerformBuzzerAlert( void );
 static void keyfobapp_StopBuzzerAlert( void );
-void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
+static void keyfobapp_HandleKeys( uint8 shift, uint8 keys );
 static void peripheralStateNotificationCB( gaprole_States_t newState );
 static void sprintronKeyfobAttrChangedCB( uint8 attrParamID );
 static void updateRssiCB( int8 newRSSI );
@@ -856,7 +856,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
  *
  * @return  none
  */
-void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
+static void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
 {
   switch ( pMsg->event )
   {
@@ -878,7 +878,7 @@ void keyfobapp_ProcessOSALMsg( osal_event_hdr_t *pMsg )
  *
  * @return  none
  */
-void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
+static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 {
   (void)shift;  // Intentionally unreferenced parameter
 
