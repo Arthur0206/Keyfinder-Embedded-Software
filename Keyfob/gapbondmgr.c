@@ -53,6 +53,8 @@
 #include "gattservapp.h"
 #include "gapgattserver.h"
 #include "gapbondmgr.h"
+#include "hal_led.h"
+#include "OSAL_PwrMgr.h"
 #include "sprintron_keyfob_app.h"
 #include "sprintron_keyfob_profile.h"
 
@@ -914,6 +916,23 @@ uint8 GAPBondMgr_ProcessGAPMsg( gapEventHdr_t *pMsg )
     case GAP_AUTHENTICATION_COMPLETE_EVENT:
       {
         gapAuthCompleteEvent_t *pPkt = (gapAuthCompleteEvent_t *)pMsg;
+
+        // Sprintron: if received IRK, then stop 15s drop connection timer and steady green LED for 2s.
+        if (pPkt->pIdentityInfo != NULL) //received IRK
+        {
+          osal_stop_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT);
+        
+          // turn off LEDs
+          HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
+          HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
+        
+          // notify the user that bonding successful by steady green LED for 2s.      
+          (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
+            
+          HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+            
+          osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_SUCCESS_LED_NOTIFY_TIME);
+        }
 
         // Should we save bonding information (one save at a time)
         if ( (pPkt->hdr.status == SUCCESS)             && 
