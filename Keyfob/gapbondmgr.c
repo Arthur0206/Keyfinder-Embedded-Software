@@ -920,6 +920,8 @@ uint8 GAPBondMgr_ProcessGAPMsg( gapEventHdr_t *pMsg )
         // Sprintron: if received IRK, then stop 15s drop connection timer and steady green LED for 2s.
         if (pPkt->pIdentityInfo != NULL) //received IRK
         {
+          allow_bond = FALSE;
+          
           osal_stop_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT);
         
           // turn off LEDs
