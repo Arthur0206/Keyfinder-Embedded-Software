@@ -189,7 +189,7 @@ static uint8 sprintronManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  //
                                      MAN_SEC_FLAG_UNKNOWN,                    // Flag
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };    // BD Addr
 
-static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_INDICATE; // | GATT_PROP_NOTIFY
+static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
 static int8 sprintronRssiValue = RSSI_VALUE_DEFAULT_VALUE;
 static gattCharCfg_t sprintronRssiValueConfig[GATT_MAX_NUM_CONN];
 
@@ -964,17 +964,8 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
         break;
         
       case GATT_CLIENT_CHAR_CFG_UUID:
-        if ( pAttr->handle == sprintronRssiReportAttrTbl[3].handle )
-        {
-          // RSSI needs to use indication due to TI BLE stack's limitation.
-          status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
-                                                   offset, GATT_CLIENT_CFG_INDICATE );
-        }
-        else
-        {
-          status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
+        status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
                                                  offset, GATT_CLIENT_CFG_NOTIFY );
-        }
         break;
         
       default:
