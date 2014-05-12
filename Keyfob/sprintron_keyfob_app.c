@@ -206,6 +206,8 @@ static uint16 keyfobDeviceConfigParameters[5] = { // connection parameters
 	                                              // av alert lasting time
 	                                              AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE };
 
+// For Sprintron security service - read primary address from flash
+__xdata __no_init uint8 primaryMac[6] @ 0x780E;
 
 // GAP - SCAN RSP data (max size = 31 bytes)
 static uint8 deviceName[] =
@@ -373,15 +375,6 @@ static void readBDAddrCB( uint8 *bd_addr )
   advertData[9] = bd_addr[4];
   advertData[10] = bd_addr[5];
   GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
-
-  // update BD Addr field in Man Sec characteristic
-  keyfobManSec[5] = bd_addr[0];
-  keyfobManSec[6] = bd_addr[1];
-  keyfobManSec[7] = bd_addr[2];
-  keyfobManSec[8] = bd_addr[3];
-  keyfobManSec[9] = bd_addr[4];
-  keyfobManSec[10] = bd_addr[5];
-  sprintronKeyfob_SetParameter( SPRINTRON_MAN_SEC, sizeof( keyfobManSec ), keyfobManSec );
 }
  
 /*********************************************************************
@@ -508,6 +501,14 @@ void KeyFobApp_Init( uint8 task_id )
     VOID GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MIN, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
     VOID GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MAX, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
 
+    // update the primary BD Addr field in Man Sec characteristic
+    keyfobManSec[5] = primaryMac[0];
+    keyfobManSec[6] = primaryMac[1];
+    keyfobManSec[7] = primaryMac[2];
+    keyfobManSec[8] = primaryMac[3];
+    keyfobManSec[9] = primaryMac[4];
+    keyfobManSec[10] = primaryMac[5];
+    sprintronKeyfob_SetParameter( SPRINTRON_MAN_SEC, sizeof( keyfobManSec ), keyfobManSec );
   
     // Setup the GAP Peripheral Role Profile
     {
