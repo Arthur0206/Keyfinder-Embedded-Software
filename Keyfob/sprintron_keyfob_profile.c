@@ -50,6 +50,7 @@
 #include "gattservapp.h"
 #include "gapbondmgr.h"
 #include "OSAL_PwrMgr.h"
+#include "osal_snv.h"
 #include "sprintron_keyfob_profile.h"
 #include "peripheral.h"
 
@@ -185,8 +186,8 @@ static CONST gattAttrType_t sprintronPanicAlertService = { ATT_BT_UUID_SIZE, spr
 static CONST gattAttrType_t sprintronDeviceConfigService = { ATT_BT_UUID_SIZE, sprintronDeviceConfigServiceUUID };
 
 static uint8 sprintronManSecCharProps = GATT_PROP_READ | GATT_PROP_WRITE;
-static uint8 sprintronManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  // MIC
-                                     MAN_SEC_FLAG_UNKNOWN,                    // Flag
+static uint8 sprintronManSec[13] = { MAN_SEC_FLAG_UNKNOWN,                    // Flag
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,      // MIC
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };    // BD Addr
 
 static uint8 sprintronRssiValueCharProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
@@ -428,6 +429,11 @@ static gattAttribute_t sprintronDeviceConfigAttrTbl[] =
       },
 };
 
+// For Sprintron security service - read primary address from flash
+__xdata __no_init uint8 primaryMac[6] @ 0x780E;
+uint8 manSecMic[6];
+uint8 manSecVerified = FALSE;
+
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
@@ -450,6 +456,11 @@ CONST gattServiceCBs_t sprintronKeyfobCBs =
  * PUBLIC FUNCTIONS
  */
 
+bool sprintron_checkMIC(uint8 Mac[], uint8 Mic[])
+{
+  return (Mic == Mac + 1);
+}
+
 /*********************************************************************
  * @fn      sprintronKeyfob_AddService
  *
@@ -468,9 +479,41 @@ bStatus_t sprintronKeyfob_AddService( uint32 services )
 
   if ( services & SPRINTRON_RSSI_MAN_SEC_SERVICE )
   {
+    uint8 snvStatus;
+
 	status = GATTServApp_RegisterService( sprintronManSecAttrTbl,
 									      GATT_NUM_ATTRS( sprintronManSecAttrTbl ),
 										  &sprintronKeyfobCBs);
+
+	// update the primary BD Addr field in Man Sec characteristic
+    sprintronManSec[7] = primaryMac[0];
+    sprintronManSec[8] = primaryMac[1];
+    sprintronManSec[9] = primaryMac[2];
+    sprintronManSec[10] = primaryMac[3];
+    sprintronManSec[11] = primaryMac[4];
+    sprintronManSec[12] = primaryMac[5];
+    
+    snvStatus = osal_snv_read( SPRINTRON_KEYFOB_NV_ITEM_MIC,
+                               sizeof(manSecMic),
+                               (uint8 *)manSecMic );
+
+    if (snvStatus == SUCCESS)
+    {
+      // check if mic is correct and set flag correspondingly.
+      if (sprintron_checkMIC(primaryMac, manSecMic))
+      {
+        manSecVerified = sprintronManSec[0] = TRUE;
+      }
+      else
+      {
+        manSecVerified = sprintronManSec[0] = FALSE;
+      }
+    }
+    else
+    {
+      manSecVerified = sprintronManSec[0] = FALSE;
+    }
+
   }
   
   if ( ( status == SUCCESS ) && ( services & SPRINTRON_RSSI_REPORT_SERVICE ) )
@@ -871,6 +914,8 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
           
           if ( (permission & GATT_PERMIT_AUTHEN_WRITE) && linkDB_Encrypted(connHandle) == FALSE )
           {
+            //We need authentication, and the link is not yet authenticated, 
+            //so return the error code to make iPhone start pairing process.
             status = ATT_ERR_INSUFFICIENT_AUTHEN;
           }
           else
@@ -883,8 +928,36 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
             {
               //Write the value
               uint8 *pCurValue = (uint8 *)pAttr->pValue;
-  		      osal_memcpy( (void*)pCurValue, (void*)pValue, sizeof(sprintronManSec) );
-              notify = SPRINTRON_MAN_SEC;          
+
+              //[Important Sprintron Note] - the field can be written by the user, but we don't update it for better security.
+              //When peer device writes MIC, we check if the MIC match the primaryMac. 
+              //If match, then it is verified successfully so we set Flag to 1 to tell peer device that it doesn't have to verify in future connection.
+              //If not match, then the device is bad. We set Flag to 0 to tell peer device it failed. Peer device can try to verify again.
+  		      osal_memcpy( (void*)manSecMic, (void*)(pValue + 1), sizeof(manSecMic) );
+  		      
+              if (sprintron_checkMIC(primaryMac, manSecMic))
+              {
+                //keyfob keep the state
+                manSecVerified = TRUE;
+                
+                //tell peer device the state
+                sprintronManSec[0] = TRUE;
+              }
+              else
+              {
+                //keyfob keep the state
+                manSecVerified = FALSE;
+                
+                //tell peer device the state
+                sprintronManSec[0] = FALSE;
+              }
+
+              //store the MIC in NV so next time when keyfob bootup we can calculate the verify state.
+              VOID osal_snv_write( SPRINTRON_KEYFOB_NV_ITEM_MIC,
+                                   sizeof(manSecMic),
+                                   (uint8 *)manSecMic );
+
+              notify = SPRINTRON_MAN_SEC;
             }
           }
         }

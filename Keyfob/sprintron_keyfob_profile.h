@@ -135,6 +135,10 @@ extern "C"
 #define CONFIG_IDX_NORMAL_ADV_INTERVAL                  3
 #define CONFIG_IDX_AUDIO_VISUAL_ALERT_TIME              4
 
+// Key Fob NV Item ID
+// According to osal api document, application can use item id range from 0x80~0xfe, we choose something in between.
+#define SPRINTRON_KEYFOB_NV_ITEM_MIC                    0xC0
+
 /*********************************************************************
  * TYPEDEFS
  */

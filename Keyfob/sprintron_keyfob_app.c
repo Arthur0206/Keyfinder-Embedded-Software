@@ -188,8 +188,8 @@ uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
-static uint8 keyfobManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  // MIC
-                                  MAN_SEC_FLAG_UNKNOWN,                    // Flag
+static uint8 keyfobManSec[13] = { MAN_SEC_FLAG_UNKNOWN,                    // Flag
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00       // MIC
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };    // BD Addr
 static int8 keyfobRssiValue = RSSI_VALUE_DEFAULT_VALUE;   
 static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE; 
@@ -205,9 +205,6 @@ static uint16 keyfobDeviceConfigParameters[5] = { // connection parameters
 	                                              NORMAL_ADV_INTERVAL_DEFAULT_VALUE,
 	                                              // av alert lasting time
 	                                              AUDIO_VISUAL_ALERT_TIME_DEFAULT_VALUE };
-
-// For Sprintron security service - read primary address from flash
-__xdata __no_init uint8 primaryMac[6] @ 0x780E;
 
 // GAP - SCAN RSP data (max size = 31 bytes)
 static uint8 deviceName[] =
@@ -503,15 +500,6 @@ void KeyFobApp_Init( uint8 task_id )
     VOID GAP_SetParamValue( TGAP_GEN_DISC_ADV_INT_MAX, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
     VOID GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MIN, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
     VOID GAP_SetParamValue( TGAP_LIM_DISC_ADV_INT_MAX, NORMAL_ADV_INTERVAL_DEFAULT_VALUE );
-
-    // update the primary BD Addr field in Man Sec characteristic
-    keyfobManSec[5] = primaryMac[0];
-    keyfobManSec[6] = primaryMac[1];
-    keyfobManSec[7] = primaryMac[2];
-    keyfobManSec[8] = primaryMac[3];
-    keyfobManSec[9] = primaryMac[4];
-    keyfobManSec[10] = primaryMac[5];
-    sprintronKeyfob_SetParameter( SPRINTRON_MAN_SEC, sizeof( keyfobManSec ), keyfobManSec );
   
     // Setup the GAP Peripheral Role Profile
     {
@@ -838,6 +826,18 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 	osal_pwrmgr_device( PWRMGR_BATTERY );
 #endif
   }
+
+  // check if the device is verified. If not, drop the connection.
+  if (events & KFD_CHECK_VERIFY_STATE_EVT)
+  {
+    if (manSecVerified == FALSE)
+    {
+      // drop connection.
+      uint16 conn_handle;
+      GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
+      HCI_EXT_DisconnectImmedCmd( conn_handle );
+    }
+  }
   
   // Discard unknown events
   return 0;
@@ -1048,6 +1048,10 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
     //if the state changed to connected, initially assume that keyfob is in range      
     case GAPROLE_CONNECTED:
       {
+        //[Important Sprintron Note] - start this timer. when it expire, check if the device is verified.
+        //If not, then drop the connection. The verify state is stored in the global varible 'manSecVerified'.
+        osal_start_timerEx(keyfobapp_TaskID, KFD_CHECK_VERIFY_STATE_EVT, KEYFOB_CHECK_VERIFY_STATE_TIME);
+        
         GAPRole_GetParameter( GAPROLE_CONNHANDLE, &connHandle );
 
         #if defined ( PLUS_BROADCASTER )

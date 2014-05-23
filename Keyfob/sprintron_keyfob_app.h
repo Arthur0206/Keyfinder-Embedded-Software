@@ -68,6 +68,7 @@ extern "C"
 #define KFD_LONG_PRESS_COMPLETE_EVT                       0x0400
 #define KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT                 0x0800
 #define KFD_LED_NOTIFY_COMPLETE_EVT                       0x1000
+#define KFD_CHECK_VERIFY_STATE_EVT                        0x2000
 
 // Key press event type: pressed or released
 #define KEY_IS_PRESSED                                    0x0
@@ -93,6 +94,9 @@ extern "C"
 #define KEYFOB_LONG_PRESS_NOTIFY_TIME         3000
 
 #define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      1500
+
+// Allow 1 minute to process manufactory security verification.
+#define KEYFOB_CHECK_VERIFY_STATE_TIME        60000
 
 extern int allow_bond;
 extern int double_click_enabled;
