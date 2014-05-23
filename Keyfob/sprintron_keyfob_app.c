@@ -185,7 +185,7 @@
  */
 uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 
-static gaprole_States_t gapProfileState = GAPROLE_INIT;
+gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
 static uint8 keyfobManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  // MIC
@@ -276,6 +276,7 @@ static uint8 buzzer_beep_count = 0;
 
 // If button is pressed, and timer has not expired, then keyfob allow bonding.
 int allow_bond = FALSE;
+int double_click_enabled = TRUE;
 
 // Key press state for after bonded
 static uint8 key_press_state = NOT_PRESSED;
@@ -797,12 +798,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
     HCI_EXT_DisconnectImmedCmd( conn_handle );
 
-    // turn off green LED
-    HalLedSet( HAL_LED_1, HAL_LED_MODE_OFF );
-
-    // notify the user that bonding failed by steady red LED for 2s.      
-    (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
-    
+    // turn on red LED steadly.
     HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
     
     osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_BOND_FAIL_LED_NOTIFY_TIME);
@@ -818,8 +814,10 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     sprintronKeyfob_SetParameter( SPRINTRON_PANIC_ALERT,  sizeof ( uint8 ), &keyfobPanicAlert );
         
     // notify the user that long press is achieved by blinking LED2.
-	(void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_HOLD ); 
-    HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+#if defined ( POWER_SAVING )
+	osal_pwrmgr_device( PWRMGR_ALWAYS_ON );
+#endif
+    HalLedSet( HAL_LED_2, HAL_LED_MODE_FLASH );
     osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_LONG_PRESS_NOTIFY_TIME);
   }
 
@@ -833,15 +831,10 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
   // led notification time is expired.
   if (events & KFD_LED_NOTIFY_COMPLETE_EVT)
   {
-    // turn off LEDs and change power saving mode to CONSERVE.
-    (void)osal_pwrmgr_task_state( keyfobapp_TaskID, PWRMGR_CONSERVE ); 
-    HalLedSet( HAL_LED_1 | HAL_LED_2 , HAL_LED_MODE_OFF );
-
-    // if still waiting for KFD_BOND_NOT_COMPLETE_IN_TIME_EVT, continue blink the red LED.
-    if ( osal_get_timeoutEx( keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT ) )
-    {
-      HalLedSet( HAL_LED_2 , HAL_LED_MODE_ON );
-    }
+   	HalLedSet( HAL_LED_1 | HAL_LED_2 , HAL_LED_MODE_OFF );
+#if defined ( POWER_SAVING )
+	osal_pwrmgr_device( PWRMGR_BATTERY );
+#endif
   }
   
   // Discard unknown events
@@ -885,11 +878,23 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
 
   // only support one button (right one)
   
-  if (keys & HAL_KEY_SW_2)
+  if (keys & HAL_KEY_SW_1)
   {
     // right button is pressed.
     // No matter what state, set up a 5s timer. If it expired, long press is completed.
-    osal_start_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT, KEYFOB_LONG_PRESS_HOLD_TIME);
+    // won't take effect if not in Connection, waiting for bonding, and LED notification.
+    if (gapProfileState != GAPROLE_CONNECTED && gapProfileState != GAPROLE_CONNECTED_ADV
+     && !osal_get_timeoutEx( keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT )
+     && !osal_get_timeoutEx( keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT ) )
+    {
+      osal_start_timerEx(keyfobapp_TaskID, KFD_LONG_PRESS_COMPLETE_EVT, KEYFOB_LONG_PRESS_HOLD_TIME);
+    }
+
+    // if double_click_enabled is false, or LED is blinking for notification, don't allow double click and directly return.
+	if (!double_click_enabled || osal_get_timeoutEx( keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT ))
+	{
+	  return;
+	}
 
     if (key_press_state == NOT_PRESSED) 
     {
@@ -901,10 +906,12 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
     else if (key_press_state == PRESSED_COUNTING)
     {
       allow_bond = TRUE;
-		
-      // blink red LED to notify user that keyfob is waiting for bonding.
-      HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
 
+	  // Set LED1 on to give feedback that the power is on, and a timer to turn off
+	  HalLedSet( HAL_LED_2, HAL_LED_MODE_FLASH );
+#if defined ( POWER_SAVING )
+	  osal_pwrmgr_device( PWRMGR_ALWAYS_ON ); // To keep the LED on continuously.
+#endif
       // stop the double click counting timer
       osal_stop_timerEx(keyfobapp_TaskID, KFD_DOUBLE_CLICK_TIME_EXPIRED_EVT);
 
@@ -1082,6 +1089,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
           HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
         }
+
+        // set this to false to enable 2 click.
+        double_click_enabled = TRUE;
       }
       break;
 
@@ -1108,6 +1118,9 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
           sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
           HalLedSet( HAL_LED_2, HAL_LED_MODE_OFF );
         }
+
+        // set this to false to enable 2 click.
+        double_click_enabled = TRUE;
       }
       break;
 

@@ -1121,6 +1121,7 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
               // address is resolved. maintain connection and clear authentication bit.
               uint8 perm = GATT_PERMIT_READ | GATT_PERMIT_WRITE;
               sprintronKeyfob_SetParameter(SPRINTRON_MAN_SEC_PERMISSION, sizeof(uint8), &perm);
+			  double_click_enabled = FALSE;
             }
           }
           

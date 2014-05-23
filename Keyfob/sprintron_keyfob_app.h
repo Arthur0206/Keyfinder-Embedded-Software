@@ -92,9 +92,10 @@ extern "C"
 
 #define KEYFOB_LONG_PRESS_NOTIFY_TIME         3000
 
-#define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      1000
+#define KEYFOB_DOUBLE_CLICK_EXPIRED_TIME      1500
 
 extern int allow_bond;
+extern int double_click_enabled;
 
 // Key Fob NV Item ID
 // According to osal api document, application can use item id range from 0x80~0xfe, we choose something in between.

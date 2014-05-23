@@ -57,6 +57,7 @@
 #include "OSAL_PwrMgr.h"
 #include "sprintron_keyfob_app.h"
 #include "sprintron_keyfob_profile.h"
+#include "peripheral.h"
 
 /*********************************************************************
  * MACROS
@@ -246,6 +247,8 @@ static void gapBondFreeAuthEvt( void );
 #if ( HOST_CONFIG & PERIPHERAL_CFG )
 static void gapBondMgrSlaveSecurityReq( uint16 connHandle );
 #endif
+
+extern gaprole_States_t gapProfileState;
 
 /*********************************************************************
  * NETWORK LAYER CALLBACKS
@@ -922,6 +925,12 @@ uint8 GAPBondMgr_ProcessGAPMsg( gapEventHdr_t *pMsg )
         {
           allow_bond = FALSE;
           
+          // if connected and bonded, double click is not allowed
+          if (gapProfileState == GAPROLE_CONNECTED || gapProfileState == GAPROLE_CONNECTED_ADV )
+          {
+            double_click_enabled = FALSE;
+          }
+			  
           osal_stop_timerEx(keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT);
         
           // turn off LEDs
