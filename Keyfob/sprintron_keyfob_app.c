@@ -185,7 +185,7 @@
  */
 uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 
-static gaprole_States_t gapProfileState = GAPROLE_INIT;
+gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
 static uint8 keyfobManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  // MIC
