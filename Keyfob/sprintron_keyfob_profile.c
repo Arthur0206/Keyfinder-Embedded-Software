@@ -49,7 +49,7 @@
 #include "gatt_profile_uuid.h"
 #include "gattservapp.h"
 #include "gapbondmgr.h"
-
+#include "OSAL_PwrMgr.h"
 #include "sprintron_keyfob_profile.h"
 #include "peripheral.h"
 
@@ -798,13 +798,19 @@ static uint8 sprintronKeyfob_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAt
         
       case SPRINTRON_RSSI_VALUE_UUID: //sprintronRssiValue
       case SPRINTRON_PROXIMITY_CONFIG_UUID: //sprintronProximityConfig
-      case SPRINTRON_PROXIMITY_ALERT_UUID: //sprintronProximityAlert
+      //case SPRINTRON_PROXIMITY_ALERT_UUID: //sprintronProximityAlert
       case SPRINTRON_CLIENT_TX_POWER_UUID: //sprintronClientTxPower
       case SPRINTRON_PANIC_ALERT_UUID: //sprintronPanicAlert
         *pLen = 1;
         pValue[0] = *pAttr->pValue;
         break;
 
+      // Add here for debugging - remove before production
+      case SPRINTRON_PROXIMITY_ALERT_UUID: //sprintronProximityAlert
+        *pLen = 1;
+        pValue[0] = pwrmgr_attribute.pwrmgr_device;
+        break;
+        
       case SPRINTRON_AUDIO_VISUAL_ALERT_UUID:
         *pLen = sizeof(sprintronAudioVisualAlert);
         *((uint32 *)pValue) = *((uint32 *)(pAttr->pValue));
