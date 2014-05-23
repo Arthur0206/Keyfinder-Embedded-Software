@@ -185,7 +185,7 @@
  */
 uint8 keyfobapp_TaskID;   // Task ID for internal task/event processing
 
-gaprole_States_t gapProfileState = GAPROLE_INIT;
+static gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
 static uint8 keyfobManSec[11] = { 0x00, 0x00, 0x00, 0x00,                  // MIC
@@ -817,7 +817,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
 #if defined ( POWER_SAVING )
 	osal_pwrmgr_device( PWRMGR_ALWAYS_ON );
 #endif
-    HalLedSet( HAL_LED_2, HAL_LED_MODE_FLASH );
+    HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
     osal_start_timerEx(keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT, KEYFOB_LONG_PRESS_NOTIFY_TIME);
   }
 
@@ -883,7 +883,7 @@ static void keyfobapp_HandleKeys( uint8 shift, uint8 keys )
     // right button is pressed.
     // No matter what state, set up a 5s timer. If it expired, long press is completed.
     // won't take effect if not in Connection, waiting for bonding, and LED notification.
-    if (gapProfileState != GAPROLE_CONNECTED && gapProfileState != GAPROLE_CONNECTED_ADV
+    if ((gapProfileState == GAPROLE_CONNECTED || gapProfileState == GAPROLE_CONNECTED_ADV)
      && !osal_get_timeoutEx( keyfobapp_TaskID, KFD_BOND_NOT_COMPLETE_IN_TIME_EVT )
      && !osal_get_timeoutEx( keyfobapp_TaskID, KFD_LED_NOTIFY_COMPLETE_EVT ) )
     {
@@ -1194,7 +1194,7 @@ static void sprintronKeyfobAttrChangedCB( uint8 attrParamID )
       if( ((uint8 *)&keyfobAudioVisualAlert)[LED_ALERT_BYTE_ORDER] == LED_ALERT_ON)
       {
         // Turn on the LED alert.
-        HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
+        HalLedSet( HAL_LED_2, HAL_LED_MODE_FLASH );
 
         // stop evt for led alert if it exists.
         osal_stop_timerEx( keyfobapp_TaskID, KFD_LED_ALERT_TIME_EXPIRED_EVT );
