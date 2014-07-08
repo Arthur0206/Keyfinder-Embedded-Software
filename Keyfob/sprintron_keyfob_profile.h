@@ -139,6 +139,7 @@ extern "C"
 // According to osal api document, application can use item id range from 0x80~0xfe, we choose something in between.
 #define SPRINTRON_KEYFOB_NV_ITEM_MIC                    0xC0
 
+extern uint8 manSecVerified;
 /*********************************************************************
  * TYPEDEFS
  */

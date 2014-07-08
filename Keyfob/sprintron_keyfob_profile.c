@@ -926,9 +926,6 @@ static bStatus_t sprintronKeyfob_WriteAttrCB( uint16 connHandle, gattAttribute_t
             }
             else
             {
-              //Write the value
-              uint8 *pCurValue = (uint8 *)pAttr->pValue;
-
               //[Important Sprintron Note] - the field can be written by the user, but we don't update it for better security.
               //When peer device writes MIC, we check if the MIC match the primaryMac. 
               //If match, then it is verified successfully so we set Flag to 1 to tell peer device that it doesn't have to verify in future connection.

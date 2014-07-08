@@ -189,7 +189,7 @@ gaprole_States_t gapProfileState = GAPROLE_INIT;
 
 // Sprintron Keyfob State Variables
 static uint8 keyfobManSec[13] = { MAN_SEC_FLAG_UNKNOWN,                    // Flag
-                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00       // MIC
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00,      // MIC
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };    // BD Addr
 static int8 keyfobRssiValue = RSSI_VALUE_DEFAULT_VALUE;   
 static int8 keyfobClientTxPwr = CLIENT_TX_POWER_DEFAULT_VALUE; 
