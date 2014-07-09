@@ -1105,9 +1105,7 @@ static void gapRole_ProcessGAPMsg( gapEventHdr_t *pMsg )
               if (allow_bond == FALSE)
               {
                 // drop connection.
-                uint16 conn_handle;
-                GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
-                HCI_EXT_DisconnectImmedCmd( conn_handle );
+                GAPRole_TerminateConnection();
               }
               else
               {

@@ -784,9 +784,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     allow_bond = FALSE;
 
     // drop connection.
-    uint16 conn_handle;
-    GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
-    HCI_EXT_DisconnectImmedCmd( conn_handle );
+    GAPRole_TerminateConnection();
 
     // turn on red LED steadly.
     HalLedSet( HAL_LED_2, HAL_LED_MODE_ON );
@@ -833,9 +831,7 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     if (manSecVerified == FALSE)
     {
       // drop connection.
-      uint16 conn_handle;
-      GAPRole_GetParameter( GAPROLE_CONNHANDLE, &conn_handle );
-      HCI_EXT_DisconnectImmedCmd( conn_handle );
+      GAPRole_TerminateConnection();
     }
   }
   
