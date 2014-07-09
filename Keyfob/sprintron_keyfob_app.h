@@ -81,7 +81,7 @@ extern "C"
 #define KEYFOB_DEFAULT_PIN_CODE               201406     
 
 // keyfob will allow bonding for this period of time after button is pressed.
-#define KEYFOB_WAIT_FOR_CONNECT_PERIOD        15000
+#define KEYFOB_WAIT_FOR_CONNECT_PERIOD        30000
 
 // period of time for consistant red LED to notify bond failed
 #define KEYFOB_BOND_FAIL_LED_NOTIFY_TIME      1000

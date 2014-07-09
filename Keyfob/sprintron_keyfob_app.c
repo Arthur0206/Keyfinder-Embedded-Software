@@ -664,15 +664,16 @@ uint16 KeyFobApp_ProcessEvent( uint8 task_id, uint16 events )
     // Request to read BD_ADDR. This need to be done after callback is setup.
     HCI_ReadBDADDRCmd();
     
-    //Set all service characteristic values to default
-    sprintronKeyfob_SetParameter( SPRINTRON_MAN_SEC,  sizeof ( keyfobManSec ), &keyfobManSec );
-    sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
-    sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_CONFIG,  sizeof ( int8 ), &keyfobProximityConfig );
-    sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
-    sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
-    sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
-    sprintronKeyfob_SetParameter( SPRINTRON_PANIC_ALERT,  sizeof ( keyfobPanicAlert ), &keyfobPanicAlert );
-    sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS,  sizeof ( keyfobDeviceConfigParameters ), keyfobDeviceConfigParameters );
+    //[Note] we don't want to initilize them here. profile will initialize them. if we set again here, correct value will be written.
+    
+    //sprintronKeyfob_SetParameter( SPRINTRON_MAN_SEC,  sizeof ( keyfobManSec ), &keyfobManSec );
+    //sprintronKeyfob_SetParameter( SPRINTRON_RSSI_VALUE,  sizeof ( int8 ), &keyfobRssiValue );
+    //sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_CONFIG,  sizeof ( int8 ), &keyfobProximityConfig );
+    //sprintronKeyfob_SetParameter( SPRINTRON_PROXIMITY_ALERT,  sizeof ( uint8 ), &keyfobProximityAlert );
+    //sprintronKeyfob_SetParameter( SPRINTRON_CLIENT_TX_POWER,  sizeof ( int8 ), &keyfobClientTxPwr );
+    //sprintronKeyfob_SetParameter( SPRINTRON_AUDIO_VISUAL_ALERT,  sizeof ( keyfobAudioVisualAlert ), &keyfobAudioVisualAlert );
+    //sprintronKeyfob_SetParameter( SPRINTRON_PANIC_ALERT,  sizeof ( keyfobPanicAlert ), &keyfobPanicAlert );
+    //sprintronKeyfob_SetParameter( SPRINTRON_DEVICE_CONFIG_PARAMETERS,  sizeof ( keyfobDeviceConfigParameters ), keyfobDeviceConfigParameters );
 
     // Set LED1 on to give feedback that the power is on, and a timer to turn off
     HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );

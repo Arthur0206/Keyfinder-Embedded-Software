@@ -458,7 +458,10 @@ CONST gattServiceCBs_t sprintronKeyfobCBs =
 
 bool sprintron_checkMIC(uint8 Mac[], uint8 Mic[])
 {
-  return (Mic == Mac + 1);
+  if (osal_memcmp(Mac, Mic, B_ADDR_LEN))
+    return true;
+  else
+    return false;
 }
 
 /*********************************************************************
