@@ -250,7 +250,7 @@ static uint8 advertData[] =
 
   // service UUID, to notify central devices what services are included
   // in this peripheral
-  0x0B,   // length of second data structure
+  0x0D,   // length of second data structure
   GAP_ADTYPE_16BIT_MORE,   // list of 16-bit UUID's available, but not complete list
   LO_UINT16( SPRINTRON_RSSI_REPORT_SERVICE_UUID ),
   HI_UINT16( SPRINTRON_RSSI_REPORT_SERVICE_UUID ),
